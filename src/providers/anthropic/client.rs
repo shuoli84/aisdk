@@ -191,12 +191,10 @@ pub(super) trait Request {
             .and_then(|response| response.error_for_status())
             .map_err(|e| Error::ApiError(e.to_string()));
 
-        let body = resp?
+        resp?
             .json::<Self::Response>()
             .await
-            .map_err(|e| Error::ApiError(e.to_string()));
-
-        body
+            .map_err(|e| Error::ApiError(e.to_string()))
     }
 }
 
