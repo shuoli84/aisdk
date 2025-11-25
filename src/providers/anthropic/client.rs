@@ -4,9 +4,11 @@
 use super::utils::default_antropic_value;
 use crate::error::{Error, Result};
 use derive_builder::Builder;
+use futures::{Stream, StreamExt};
 use reqwest::{self, header::CONTENT_TYPE};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
+use std::pin::Pin;
 
 const ANTHROPIC_API_VERSION: &str = "2023-06-01"; // TODO: move this to settings
 
@@ -153,13 +155,57 @@ pub enum AntropicThinking {
     Enable { budget_tokens: usize },
 }
 
+// ---------------------------------- Streaming types ----------------------------------
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type")]
+pub enum AnthropicStreamEvent {
+    #[serde(rename = "message_start")]
+    MessageStart { message: AntropicMessageResponse },
+    #[serde(rename = "content_block_start")]
+    ContentBlockStart {
+        index: usize,
+        content_block: AntropicContentBlock,
+    },
+    #[serde(rename = "content_block_delta")]
+    ContentBlockDelta { index: usize, delta: AnthropicDelta },
+    #[serde(rename = "content_block_stop")]
+    ContentBlockStop { index: usize },
+    #[serde(rename = "message_delta")]
+    MessageDelta {
+        delta: AnthropicMessageDelta,
+        usage: AntropicUsage,
+    },
+    #[serde(rename = "message_stop")]
+    MessageStop,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type")]
+pub enum AnthropicDelta {
+    #[serde(rename = "text_delta")]
+    TextDelta { text: String },
+    #[serde(rename = "thinking_delta")]
+    ThinkingDelta { thinking: String },
+    #[serde(rename = "tool_use_delta")]
+    ToolUseDelta { partial_json: String },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AnthropicMessageDelta {
+    pub stop_reason: Option<String>,
+    pub stop_sequences: Option<Vec<String>>,
+}
+
 pub(super) trait Request {
     type Response: DeserializeOwned;
+    type StreamEvent: DeserializeOwned;
 
     fn path(&self) -> &str;
     fn method(&self) -> reqwest::Method;
     fn query_params(&self) -> Vec<(&str, &str)>;
     fn body(&self) -> reqwest::Body;
+    fn streaming_body(&self) -> reqwest::Body;
 
     /// Sets the default headers for the request
     fn headers(&self) -> reqwest::header::HeaderMap {
@@ -196,6 +242,51 @@ pub(super) trait Request {
             .await
             .map_err(|e| Error::ApiError(e.to_string()))
     }
+
+    async fn send_and_stream(
+        &self,
+    ) -> Result<Pin<Box<dyn Stream<Item = Result<Self::StreamEvent>> + Send>>> {
+        let client = reqwest::Client::new();
+        let resp = client
+            .request(self.method(), self.path())
+            .headers(self.headers())
+            .query(&self.query_params())
+            .body(self.streaming_body())
+            .send()
+            .await
+            .and_then(|response| response.error_for_status())
+            .map_err(|e| Error::ApiError(e.to_string()))?;
+
+        let stream = resp.bytes_stream().map(|result| {
+            result
+                .map_err(|e| Error::ApiError(e.to_string()))
+                .and_then(|bytes| {
+                    let text = String::from_utf8(bytes.to_vec())
+                        .map_err(|e| Error::ApiError(format!("UTF-8 error: {}", e)))?;
+                    let mut events = vec![];
+                    for message in text.split("\n\n") {
+                        if let Some(data_line) =
+                            message.lines().find(|line| line.starts_with("data: "))
+                        {
+                            let json_str = &data_line[6..];
+                            if json_str.trim().is_empty() || json_str.trim() == "[DONE]" {
+                                continue;
+                            }
+                            let event: Self::StreamEvent = serde_json::from_str(json_str)
+                                .map_err(|e| Error::ApiError(format!("JSON parse error: {}", e)))?;
+                            events.push(event);
+                        }
+                    }
+                    if events.is_empty() {
+                        Err(Error::ApiError("No events parsed".to_string()))
+                    } else {
+                        Ok(events.into_iter().next().unwrap())
+                    }
+                })
+        });
+
+        Ok(Box::pin(stream))
+    }
 }
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize, Builder)]
@@ -222,6 +313,7 @@ impl AnthropicClient {
 
 impl Request for AnthropicClient {
     type Response = AntropicMessageResponse;
+    type StreamEvent = AnthropicStreamEvent;
 
     fn path(&self) -> &str {
         "/messages"
@@ -239,44 +331,10 @@ impl Request for AnthropicClient {
         let body = serde_json::to_string(self).unwrap();
         reqwest::Body::from(body)
     }
-}
 
-// ---------------------------------- Legacy Antropic API Impl ----------------------------------
-//
-// impl Anthropic {
-//     fn parse_sse_event(event_text: &str) -> Option<Result<StreamChunkData>> {
-//         let data_str = event_text
-//             .lines()
-//             .find_map(|line| line.strip_prefix("data: "))
-//             .map(str::trim)?;
-//
-//         if data_str == "[DONE]" {
-//             return Some(Ok(StreamChunkData {
-//                 text: String::new(),
-//                 stop_reason: Some("stop".to_string()),
-//             }));
-//         }
-//
-//         if let Ok(event) = serde_json::from_str::<AnthropicStreamEvent>(data_str)
-//             && event.event_type == "content_block_delta"
-//             && let Some(delta) = event.data.get("delta")
-//             && let Some(text) = delta.get("text")
-//             && let Some(text_str) = text.as_str()
-//         {
-//             return Some(Ok(StreamChunkData {
-//                 text: text_str.to_string(),
-//                 stop_reason: None,
-//             }));
-//         }
-//
-//         if let Ok(event) = serde_json::from_str::<AnthropicStreamEvent>(data_str)
-//             && event.event_type == "message_stop"
-//         {
-//             return Some(Ok(StreamChunkData {
-//                 text: String::new(),
-//                 stop_reason: Some("stop".to_string()),
-//             }));
-//         }
-//         None
-//     }
-// }
+    fn streaming_body(&self) -> reqwest::Body {
+        let mut clone = self.clone();
+        clone.stream = Some(true);
+        reqwest::Body::from(serde_json::to_string(&clone).unwrap())
+    }
+}
