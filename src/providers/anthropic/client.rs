@@ -15,6 +15,50 @@ const ANTHROPIC_API_VERSION: &str = "2023-06-01"; // TODO: move this to settings
 // ---------------------------------- Antropic API types ----------------------------------
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
+pub enum AnthropicErrorType {
+    #[serde(rename = "invalid_request_error")]
+    #[default]
+    InvalidRequestError,
+    AuthenticationError,
+    PermissionError,
+    NotFoundError,
+    RequestTooLarge,
+    RateLimitError,
+    ApiError,
+    OverloadedError,
+}
+
+impl std::fmt::Display for AnthropicErrorType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.to_string())
+    }
+}
+
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+pub struct AnthropicError {
+    #[serde(rename = "type")]
+    pub type_: AnthropicErrorType,
+    pub message: String,
+}
+
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+pub enum AnthropicStopReason {
+    #[default]
+    #[serde(rename = "end_turn")]
+    EndTurn,
+    #[serde(rename = "max_tokens")]
+    MaxTokens,
+    #[serde(rename = "stop_sequence")]
+    StopSequence,
+    #[serde(rename = "tool_use")]
+    ToolUse,
+    #[serde(rename = "pause_turn")]
+    PauseTurn,
+    #[serde(rename = "refusal")]
+    Refusal,
+}
+
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct AntropicMessageResponse {
     pub id: String,
     pub content: Vec<AntropicContentBlock>,
@@ -174,10 +218,12 @@ pub enum AnthropicStreamEvent {
     #[serde(rename = "message_delta")]
     MessageDelta {
         delta: AnthropicMessageDelta,
-        usage: AntropicUsage,
+        usage: AnthropicMessageDeltaUsage,
     },
     #[serde(rename = "message_stop")]
     MessageStop,
+    #[serde(rename = "error")]
+    Error { error: AnthropicError },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -187,14 +233,27 @@ pub enum AnthropicDelta {
     TextDelta { text: String },
     #[serde(rename = "thinking_delta")]
     ThinkingDelta { thinking: String },
-    #[serde(rename = "tool_use_delta")]
+    #[serde(rename = "input_json_delta")]
     ToolUseDelta { partial_json: String },
+    #[serde(rename = "citation_delta")]
+    CitationDelta { citation: AntropicCitation },
+    #[serde(rename = "signature_delta")]
+    SignatureDelta { signature: String },
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+pub struct AnthropicMessageDeltaUsage {
+    pub cache_creation_input_tokens: Option<usize>,
+    pub cache_read_input_tokens: Option<usize>,
+    pub input_tokens: Option<usize>,
+    pub output_tokens: usize,
+    pub server_tool_use: Option<AntropicServerToolUsage>,
+}
+
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub struct AnthropicMessageDelta {
-    pub stop_reason: Option<String>,
-    pub stop_sequences: Option<Vec<String>>,
+    pub stop_reason: Option<AnthropicStopReason>,
+    pub stop_sequence: Option<String>,
 }
 
 pub(super) trait Request {

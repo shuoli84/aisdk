@@ -6,11 +6,11 @@ pub mod conversions;
 pub mod settings;
 pub mod utils;
 
-use crate::core::ToolCallInfo;
 use crate::core::language_model::{
     LanguageModelOptions, LanguageModelResponse, LanguageModelResponseContentType, ProviderStream,
 };
 use crate::core::tools::ToolDetails;
+use crate::core::{LanguageModelStreamChunkType, ToolCallInfo};
 use crate::error::ProviderError;
 use crate::providers::anthropic::client::AntropicContentBlock;
 use crate::providers::anthropic::{
@@ -22,6 +22,7 @@ use crate::{
     error::Result,
 };
 use async_trait::async_trait;
+use futures::{StreamExt, stream::once};
 use serde::Serialize;
 
 /// The Anthropic provider.
@@ -112,49 +113,25 @@ impl LanguageModel for Anthropic {
     async fn stream_text(&mut self, options: LanguageModelOptions) -> Result<ProviderStream> {
         let mut request: AnthropicClient = options.into();
         request.model = self.settings.model_name.clone();
-        request.stream = Some(true);
+        let response = request.send_and_stream().await?;
 
-        // let response = self
-        //     .client
-        //     .post("https://api.anthropic.com/v1/messages")
-        //     .header("Content-Type", "application/json")
-        //     .header("x-api-key", &self.settings.api_key)
-        //     .header("anthropic-version", "2023-06-01")
-        //     .json(&request)
-        //     .send()
-        //     .await?;
-        //
-        // let buffer = Arc::new(Mutex::new(String::new()));
-        //
-        // let stream = response.bytes_stream().map(move |chunk_result| {
-        //     match chunk_result {
-        //         Ok(chunk) => {
-        //             let mut buffer_guard = buffer.lock().unwrap();
-        //             buffer_guard.push_str(&String::from_utf8_lossy(&chunk));
-        //
-        //             // Process complete SSE events (separated by double newlines)
-        //             while let Some(event_end) = buffer_guard.find("\n\n") {
-        //                 let event_text = &buffer_guard[..event_end];
-        //                 if let Some(chunk_data) = Self::parse_sse_event(event_text) {
-        //                     buffer_guard.drain(..event_end + 2);
-        //                     return chunk_data;
-        //                 }
-        //                 buffer_guard.drain(..event_end + 2);
-        //             }
-        //
-        //             Ok(StreamChunkData {
-        //                 text: String::new(),
-        //                 stop_reason: None,
-        //             })
-        //         }
-        //         Err(e) => Err(e.into()),
-        //     }
-        // });
-        //
-        // Ok(LanguageModelStreamResponse {
-        //     stream: Box::pin(stream),
-        //     model: Some(self.settings.model_name.to_string()),
-        // })
-        todo!()
+        #[derive(Default)]
+        struct StreamState {
+            completed: bool,
+        }
+
+        let stream = response.scan::<_, Result<Vec<LanguageModelStreamChunkType>>, _, _>(
+            StreamState::default(),
+            |state, evt_res| {
+                // If already completed, don't emit anything more
+                if state.completed {
+                    return futures::future::ready(None);
+                };
+
+                todo!();
+            },
+        );
+
+        todo!();
     }
 }
