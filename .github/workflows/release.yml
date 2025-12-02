@@ -19,6 +19,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - run: cargo test --all-features
+      - run: cargo install cargo-semver-checks
       - run: cargo semver-checks check-release # ensure correct version format
       - uses: rust-lang/crates-io-auth-action@v1
         id: auth
