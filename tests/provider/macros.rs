@@ -105,9 +105,9 @@ macro_rules! generate_language_model_tests {
         use aisdk::core::{
             LanguageModelRequest, LanguageModelStreamChunkType, Message,
             language_model::{LanguageModelResponseContentType, StopReason},
-            tool,
-            tools::{Tool, ToolExecute},
+            tools::Tool,
         };
+        use aisdk_macros::tool;
         use dotenv::dotenv;
         use futures::StreamExt;
         use schemars::JsonSchema;
@@ -408,7 +408,7 @@ macro_rules! generate_language_model_tool_tests {
 
             #[tool]
             /// Returns the username
-            fn get_username() {
+            fn get_username() -> Tool {
                 Ok("ishak".to_string())
             }
 
@@ -431,7 +431,7 @@ macro_rules! generate_language_model_tool_tests {
 
             #[tool]
             /// Returns the username
-            fn get_username() {
+            fn get_username() -> Tool {
                 Ok("ishak".to_string())
             }
 
@@ -544,7 +544,7 @@ macro_rules! generate_language_model_hook_tests {
 
             #[tool]
             // Returns the neighborhood
-            fn get_neighborhood() -> Result<String> {
+            fn get_neighborhood() -> Tool {
                 Ok("ankocha".to_string())
             }
 
@@ -575,7 +575,7 @@ macro_rules! generate_language_model_hook_tests {
 
             #[tool]
             // Returns the neighbourhood
-            fn get_neighborhood() -> Result<String> {
+            fn get_neighborhood() -> Tool {
                 Ok("ankocha".to_string())
             }
 
@@ -606,7 +606,7 @@ macro_rules! generate_language_model_hook_tests {
             let log_finish = Arc::clone(&log);
 
             #[tool]
-            fn get_neighbourhood() -> Result<String> {
+            fn get_neighbourhood() -> Tool {
                 Ok("".to_string())
             }
 
@@ -641,7 +641,7 @@ macro_rules! generate_language_model_hook_tests {
             skip_if_no_api_key!();
 
             #[tool]
-            fn get_neighborhood() -> Result<String> {
+            fn get_neighborhood() -> Tool {
                 Ok("done".to_string())
             }
 
@@ -667,7 +667,7 @@ macro_rules! generate_language_model_hook_tests {
             skip_if_no_api_key!();
 
             #[tool]
-            fn get_neighbourhood() -> Result<String> {
+            fn get_neighbourhood() -> Tool {
                 Ok("ankocha".to_string())
             }
 
@@ -698,7 +698,7 @@ macro_rules! generate_language_model_hook_tests {
             skip_if_no_api_key!();
 
             #[tool]
-            fn get_neighbourhood() -> Result<String> {
+            fn get_neighbourhood() -> Tool {
                 Ok("anckocha".to_string())
             }
 
@@ -726,12 +726,12 @@ macro_rules! generate_language_model_hook_tests {
             let counter_clone = Arc::clone(&counter);
 
             #[tool]
-            fn get_neighbourhood() -> Result<String> {
+            fn get_neighbourhood() -> Tool {
                 Ok("You can find the neighborhood if you call the get_neighbourhood_2 tool".to_string())
             }
 
             #[tool]
-            fn get_neighbourhood_2() -> Result<String> {
+            fn get_neighbourhood_2() -> Tool {
                 Ok("ankocha".to_string())
             }
 
@@ -802,7 +802,7 @@ macro_rules! generate_language_model_hook_tests {
                 .model(<$provider_type>::new($config.basic_model()))
                 .prompt("Say hello")
                 .on_step_start(|opts| {
-                    opts.temperature = Some(0); // Mutate
+                    opts.system = Some("Updated system message!!!".to_string());
                 })
                 .build()
                 .generate_text()
@@ -811,6 +811,7 @@ macro_rules! generate_language_model_hook_tests {
 
             // Hard to verify mutation directly, but ensure no panic and response ok
             assert!(result.text().is_some());
+            assert_eq!(result.options.system.unwrap(), "Updated system message!!!");
         }
 
         #[tokio::test]
@@ -852,7 +853,7 @@ macro_rules! generate_language_model_hook_tests {
 
             #[tool]
             // Returns the username
-            fn get_username() -> Result<String> {
+            fn get_username() -> Tool {
                 Ok("ishak".to_string())
             }
 
@@ -962,7 +963,7 @@ macro_rules! generate_language_model_step_id_tests {
             skip_if_no_api_key!();
 
             #[tool]
-            fn get_test_value() -> Result<String> {
+            fn get_test_value() -> Tool {
                 Ok("test_value".to_string())
             }
 
