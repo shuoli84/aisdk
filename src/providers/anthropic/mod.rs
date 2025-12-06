@@ -6,6 +6,7 @@ pub mod conversions;
 pub mod settings;
 pub mod utils;
 
+use crate::core::client::Request;
 use crate::core::language_model::{
     LanguageModelOptions, LanguageModelResponse, LanguageModelResponseContentType,
     LanguageModelStreamChunk, ProviderStream,
@@ -16,7 +17,7 @@ use crate::core::{LanguageModelStreamChunkType, ToolCallInfo};
 use crate::error::ProviderError;
 use crate::providers::anthropic::client::{
     AnthropicClient, AnthropicDelta, AnthropicError, AnthropicMessageDeltaUsage,
-    AnthropicStreamEvent, AntropicContentBlock, Request,
+    AnthropicStreamEvent, AntropicContentBlock,
 };
 use crate::providers::anthropic::settings::{
     AnthropicProviderSettings, AnthropicProviderSettingsBuilder,

@@ -9,7 +9,7 @@ use serde::de::DeserializeOwned;
 use std::pin::Pin;
 
 #[allow(dead_code)]
-pub(super) trait Request {
+pub(crate) trait Request {
     type Response: DeserializeOwned;
     type StreamEvent: DeserializeOwned;
 
