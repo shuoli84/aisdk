@@ -229,7 +229,7 @@ mod tests {
     #[test]
     fn test_reasoning_effort_conversion_high() {
         let effort = ReasoningEffort::High;
-        let openai_effort: ReasoningEffort = effort.into();
+        let openai_effort: ReasoningEffort = effort;
         assert_eq!(openai_effort, ReasoningEffort::High);
     }
 

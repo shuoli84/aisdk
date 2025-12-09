@@ -67,12 +67,9 @@ impl LanguageModel for OpenAI {
             match out {
                 types::MessageItem::OutputMessage { content, .. } => {
                     for c in content {
-                        match c {
-                            types::OutputContent::OutputText { text, .. } => {
-                                collected.push(LanguageModelResponseContentType::new(text))
-                            }
-                            _ => (),
-                        };
+                        if let types::OutputContent::OutputText { text, .. } = c {
+                            collected.push(LanguageModelResponseContentType::new(text))
+                        }
                     }
                 }
                 types::MessageItem::FunctionCall {
@@ -153,21 +150,18 @@ impl LanguageModel for OpenAI {
                         let mut collected: Vec<LanguageModelResponseContentType> = Vec::new();
 
                         for out in response.output.unwrap_or_default() {
-                            match out {
-                                types::MessageItem::FunctionCall {
-                                    call_id,
-                                    arguments,
-                                    name,
-                                    ..
-                                } => {
-                                    let mut tool_info = ToolCallInfo::new(name);
-                                    tool_info.id(call_id);
-                                    tool_info.input(arguments);
-                                    collected.push(LanguageModelResponseContentType::ToolCall(
-                                        tool_info,
-                                    ));
-                                }
-                                _ => {}
+                            if let types::MessageItem::FunctionCall {
+                                call_id,
+                                arguments,
+                                name,
+                                ..
+                            } = out
+                            {
+                                let mut tool_info = ToolCallInfo::new(name);
+                                tool_info.id(call_id);
+                                tool_info.input(arguments);
+                                collected
+                                    .push(LanguageModelResponseContentType::ToolCall(tool_info));
                             }
                         }
 
