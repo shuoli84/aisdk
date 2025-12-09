@@ -197,7 +197,7 @@ pub struct OpenAIErrorByCode {
     pub message: String,
 }
 
-/// See https://platform.openai.com/docs/api-reference/responses/create#responses_create-input
+/// See <https://platform.openai.com/docs/api-reference/responses/create#responses_create-input>
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(untagged)]
 pub enum Input {
@@ -207,18 +207,18 @@ pub enum Input {
     InputItemList(Vec<InputItem>),
 }
 
-/// See https://platform.openai.com/docs/api-reference/responses/create#responses_create-input-input_item_list
+/// See <https://platform.openai.com/docs/api-reference/responses/create#responses_create-input-input_item_list>
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(untagged)]
 pub enum InputItem {
-    /// See https://platform.openai.com/docs/api-reference/responses/create#responses_create-input-input_item_list-input_message
+    /// See <https://platform.openai.com/docs/api-reference/responses/create#responses_create-input-input_item_list-input_message>
     InputMessage {
         content: InputItemContent,
         role: Role,
     },
-    /// See https://platform.openai.com/docs/api-reference/responses/create#responses_create-input-input_item_list-item
+    /// See <https://platform.openai.com/docs/api-reference/responses/create#responses_create-input-input_item_list-item>
     Item(MessageItem),
-    /// See https://platform.openai.com/docs/api-reference/responses/create#responses_create-input-input_item_list-item_reference
+    /// See <https://platform.openai.com/docs/api-reference/responses/create#responses_create-input-input_item_list-item_reference>
     ItemReference { id: String },
 }
 
@@ -238,7 +238,7 @@ pub enum Role {
     Developer,
 }
 
-/// See https://platform.openai.com/docs/api-reference/responses/create#responses_create-input-input_item_list-item
+/// See <https://platform.openai.com/docs/api-reference/responses/create#responses_create-input-input_item_list-item>
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[non_exhaustive]
 #[serde(untagged)]
@@ -337,7 +337,7 @@ pub enum ImageDetail {
     Low,
 }
 
-/// See https://platform.openai.com/docs/api-reference/responses/create#responses_create-input-input_item_list-item-output_message-content
+/// See <https://platform.openai.com/docs/api-reference/responses/create#responses_create-input-input_item_list-item-output_message-content>
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum OutputContent {
