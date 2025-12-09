@@ -6,7 +6,7 @@ pub mod types;
 
 pub use types::*;
 
-use crate::core::client::Request;
+use crate::core::client::Client;
 use crate::error::Error;
 use derive_builder::Builder;
 use reqwest::{self, header::CONTENT_TYPE};
@@ -39,7 +39,7 @@ impl OpenAiParams {
     }
 }
 
-impl Request for OpenAiParams {
+impl Client for OpenAiParams {
     type Response = types::OpenAiResponse;
     type StreamEvent = types::OpenAiStreamEvent;
 
