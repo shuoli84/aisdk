@@ -46,24 +46,14 @@ pub enum OpenAiStreamEvent {
         delta: String,
         logprobs: Option<Vec<LogProbs>>,
     },
-    /// Emitted when text content is finalized.
-    #[serde(rename = "response.output_text.done")]
-    ResponseOutputTextDone {
+    /// Emitted when a delta is added to a reasoning summary text.
+    #[serde(rename = "response.reasoning_summary_text.delta")]
+    ResponseReasoningSummaryTextDelta {
         sequence_number: u64,
         item_id: String,
         output_index: u32,
-        content_index: u32,
-        text: String,
-        logprobs: Option<Vec<LogProbs>>,
-    },
-    /// Emitted when function-call arguments are finalized.
-    #[serde(rename = "response.function_call_arguments.done")]
-    ResponseFunctionCallArgumentsDone {
-        name: String,
-        sequence_number: u64,
-        item_id: String,
-        output_index: u32,
-        arguments: String,
+        summary_index: u32,
+        delta: String,
     },
     /// Emitted when an error occurs.
     #[serde(rename = "error")]

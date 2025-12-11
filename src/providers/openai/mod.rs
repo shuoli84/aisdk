@@ -8,7 +8,7 @@ pub mod settings;
 use crate::core::client::Client;
 use crate::core::language_model::{
     LanguageModelOptions, LanguageModelResponse, LanguageModelResponseContentType,
-    LanguageModelStreamChunk, LanguageModelStreamChunkType, ProviderStream,
+    LanguageModelStreamChunk, LanguageModelStreamChunkType, ProviderStream, Usage,
 };
 use crate::core::messages::AssistantMessage;
 use crate::providers::openai::client::{OpenAIOptions, types};
@@ -102,90 +102,92 @@ impl LanguageModel for OpenAI {
 
         let openai_stream = self.send_and_stream(self.settings.base_url.clone()).await?;
 
-        let stream = openai_stream.map(|evt_res| {
-            match evt_res {
-                Ok(client::OpenAiStreamEvent::ResponseOutputTextDelta { delta, .. }) => {
-                    Ok(vec![LanguageModelStreamChunk::Delta(
-                        LanguageModelStreamChunkType::Text(delta),
-                    )])
-                }
-                Ok(client::OpenAiStreamEvent::ResponseOutputTextDone { text, .. }) => {
-                    Ok(vec![LanguageModelStreamChunk::Done(
-                        AssistantMessage {
-                            content: LanguageModelResponseContentType::new(text),
-                            usage: None,
-                        },
-                    )])
-                }
-                Ok(client::OpenAiStreamEvent::ResponseFunctionCallArgumentsDone {
-                    name,
-                    item_id,
-                    arguments,
-                    ..
-                }) => {
-                    let mut tool_info = ToolCallInfo::new(name);
-                    tool_info.id(item_id);
-                    tool_info.input(
-                        serde_json::from_str(&arguments)
-                            .unwrap_or_else(|_| serde_json::Value::String(arguments).into()),
-                    );
+        let stream = openai_stream.map(|evt_res| match evt_res {
+            Ok(client::OpenAiStreamEvent::ResponseOutputTextDelta { delta, .. }) => {
+                Ok(vec![LanguageModelStreamChunk::Delta(
+                    LanguageModelStreamChunkType::Text(delta),
+                )])
+            }
+            Ok(client::OpenAiStreamEvent::ResponseReasoningSummaryTextDelta { delta, .. }) => {
+                Ok(vec![LanguageModelStreamChunk::Delta(
+                    LanguageModelStreamChunkType::Reasoning(delta),
+                )])
+            }
+            Ok(client::OpenAiStreamEvent::ResponseCompleted { response, .. }) => {
+                let mut result: Vec<LanguageModelStreamChunk> = Vec::new();
 
-                    Ok(vec![LanguageModelStreamChunk::Done(
-                        AssistantMessage {
-                            content: LanguageModelResponseContentType::ToolCall(tool_info),
-                            usage: None,
-                        },
-                    )])
-                }
-                Ok(client::OpenAiStreamEvent::ResponseCompleted { response, .. }) => {
-                    //println!("response completed: {:?}", response);
-                    let mut chunks = Vec::new();
-                    for out in response.output.unwrap_or_default() {
-                        println!("output: {:?}", out);
-                        if let types::MessageItem::FunctionCall {
-                            call_id,
-                            arguments,
-                            name,
-                            ..
-                        } = out
+                let usage: Usage = response.usage.unwrap_or_default().into();
+                let output = response.output.unwrap_or_default();
+                let last_message: Option<types::MessageItem> = output.last().cloned();
+
+                match &last_message {
+                    // ---- Final OutputMessage ----
+                    Some(types::MessageItem::OutputMessage { content, .. }) => {
+                        if let Some(types::OutputContent::OutputText { text, .. }) = content.first()
                         {
-                            let input = arguments;
-                            let mut tool_info = ToolCallInfo::new(name);
-                            tool_info.id(call_id);
-                            tool_info.input(input);
-                            chunks.push(LanguageModelStreamChunk::Done(AssistantMessage {
-                                content: LanguageModelResponseContentType::ToolCall(tool_info),
-                                usage: response.usage.as_ref().map(|u| u.clone().into()),
+                            result.push(LanguageModelStreamChunk::Done(AssistantMessage {
+                                content: LanguageModelResponseContentType::new(text.clone()),
+                                usage: Some(usage.clone()),
                             }));
                         }
                     }
-                    Ok(chunks)
+
+                    // ---- Reasoning ----
+                    Some(types::MessageItem::Reasoning { summary, .. }) => {
+                        if let Some(types::ReasoningSummary { text, .. }) = summary.first() {
+                            result.push(LanguageModelStreamChunk::Done(AssistantMessage {
+                                content: LanguageModelResponseContentType::Reasoning(text.to_owned()),
+                                usage: Some(usage.clone()),
+                            }));
+                        }
+                    }
+
+                    // ---- FunctionCall ----
+                    Some(types::MessageItem::FunctionCall {
+                        call_id,
+                        name,
+                        arguments,
+                        ..
+                    }) => {
+                        let mut tool_info = ToolCallInfo::new(name.clone());
+                        tool_info.id(call_id.clone());
+                        tool_info.input(arguments.clone());
+
+                        result.push(LanguageModelStreamChunk::Done(AssistantMessage {
+                            content: LanguageModelResponseContentType::ToolCall(tool_info),
+                            usage: Some(usage.clone()),
+                        }));
+                    }
+
+                    _ => {}
                 }
-                Ok(client::OpenAiStreamEvent::ResponseIncomplete { response, .. }) => {
-                    Ok(vec![LanguageModelStreamChunk::Delta(
-                        LanguageModelStreamChunkType::Incomplete(
-                            response
-                                .incomplete_details
-                                .map(|d| d.reason)
-                                .unwrap_or("Unknown".to_string()),
-                        ),
-                    )])
-                }
-                Ok(client::OpenAiStreamEvent::ResponseError { code, message, .. }) => {
-                    let reason = format!("{}: {}", code.unwrap_or("unknown".to_string()), message);
-                    Ok(vec![LanguageModelStreamChunk::Delta(
-                        LanguageModelStreamChunkType::Failed(reason),
-                    )])
-                }
-                Ok(evt) => Ok(vec![LanguageModelStreamChunk::Delta(
-                    LanguageModelStreamChunkType::NotSupported(format!("{evt:?}")),
-                )]),
-                Err(e) => {
-                    let reason = format!("Stream error: {}", e);
-                    Ok(vec![LanguageModelStreamChunk::Delta(
-                        LanguageModelStreamChunkType::Failed(reason),
-                    )])
-                }
+
+                Ok(result)
+            }
+            Ok(client::OpenAiStreamEvent::ResponseIncomplete { response, .. }) => {
+                Ok(vec![LanguageModelStreamChunk::Delta(
+                    LanguageModelStreamChunkType::Incomplete(
+                        response
+                            .incomplete_details
+                            .map(|d| d.reason)
+                            .unwrap_or("Unknown".to_string()),
+                    ),
+                )])
+            }
+            Ok(client::OpenAiStreamEvent::ResponseError { code, message, .. }) => {
+                let reason = format!("{}: {}", code.unwrap_or("unknown".to_string()), message);
+                Ok(vec![LanguageModelStreamChunk::Delta(
+                    LanguageModelStreamChunkType::Failed(reason),
+                )])
+            }
+            Ok(evt) => Ok(vec![LanguageModelStreamChunk::Delta(
+                LanguageModelStreamChunkType::NotSupported(format!("{evt:?}")),
+            )]),
+            Err(e) => {
+                let reason = format!("Stream error: {}", e);
+                Ok(vec![LanguageModelStreamChunk::Delta(
+                    LanguageModelStreamChunkType::Failed(reason),
+                )])
             }
         });
 
