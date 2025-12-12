@@ -380,7 +380,7 @@ macro_rules! generate_language_model_streaming_tests {
             let response = LanguageModelRequest::builder()
                 .model(<$provider_type>::new($config.reasoning_model()))
                 .prompt("Count from 1 to 5 step by step")
-                //.reasoning_effort(aisdk::core::language_model::ReasoningEffort::Medium)
+                .reasoning_effort(aisdk::core::language_model::ReasoningEffort::Medium)
                 .build()
                 .stream_text()
                 .await
@@ -447,6 +447,32 @@ macro_rules! generate_language_model_tool_tests {
         }
 
         #[tokio::test]
+        async fn test_generate_text_with_tools_input() {
+            skip_if_no_api_key!();
+
+            #[tool]
+            /// Returns the username
+            fn get_username(user_id: String) -> Tool {
+                match user_id.as_str() {
+                    "123" => Ok("sura".to_string()),
+                    _ => Ok("invalid".to_string()),
+                }
+            }
+
+            let response = LanguageModelRequest::builder()
+                .model(<$provider_type>::new($config.tool_model()))
+                .system("you are a helpful assistant.")
+                .prompt("What is the username with user id 123?")
+                .with_tool(get_username())
+                .build()
+                .generate_text()
+                .await
+                .unwrap();
+
+            assert!(response.text().unwrap().contains("sura"));
+        }
+
+        #[tokio::test]
         async fn test_generate_stream_with_tools() {
             skip_if_no_api_key!();
 
@@ -476,6 +502,41 @@ macro_rules! generate_language_model_tool_tests {
             }
 
             assert!(buf.contains("ishak"));
+        }
+
+        #[tokio::test]
+        async fn test_generate_stream_with_tools_input() {
+            skip_if_no_api_key!();
+
+            #[tool]
+            /// Returns the username
+            fn get_username(user_id: String) -> Tool {
+                match user_id.as_str() {
+                    "123" => Ok("sura".to_string()),
+                    _ => Ok("invalid".to_string()),
+                }
+            }
+
+            let response = LanguageModelRequest::builder()
+                .model(<$provider_type>::new($config.tool_model()))
+                .system("You are a helpful assistant.")
+                .prompt("What is the username for user id 123?")
+                .with_tool(get_username())
+                .build()
+                .stream_text()
+                .await
+                .unwrap();
+
+            let mut stream = response.stream;
+
+            let mut buf = String::new();
+            while let Some(chunk) = stream.next().await {
+                if let LanguageModelStreamChunkType::Text(text) = chunk {
+                    buf.push_str(&text);
+                }
+            }
+
+            assert!(buf.contains("sura"));
         }
     };
 }

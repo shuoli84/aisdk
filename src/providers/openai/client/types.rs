@@ -267,7 +267,7 @@ pub enum MessageItem {
         type_: String, // always "message"
     },
     FunctionCall {
-        arguments: serde_json::Value,
+        arguments: String,
         call_id: String,
         name: String,
         #[serde(rename = "type")]
