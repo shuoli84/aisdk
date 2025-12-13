@@ -20,7 +20,7 @@ use syn::{
 ///
 /// ```rust,no_run
 /// use aisdk_macros::tool;
-/// use aisdk::core::tools::{Tool, ToolExecute};
+/// use aisdk::core::tools::Tool;
 ///
 /// #[tool]
 /// /// Returns the username
@@ -50,13 +50,13 @@ use syn::{
 /// # Example with overrides
 /// ```rust,no_run
 /// use aisdk_macros::tool;
-/// use aisdk::core::tools::{Tool, ToolExecute};
+/// use aisdk::core::tools::Tool;
 ///
 ///     #[tool(
 ///         name = "the-name-for-this-tool",
 ///         desc = "the-description-for-this-tool"
 ///     )]
-///     fn get_username(id: String) -> Result<String, String> {
+///     fn get_username(id: String) -> Tool {
 ///         // Your code here
 ///         Ok(format!("user_{}", id))
 ///     }
@@ -65,6 +65,7 @@ pub fn tool(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let input_fn = parse_macro_input!(item as ItemFn);
     let fn_name = &input_fn.sig.ident;
     let vis = &input_fn.vis;
+    let return_type = &input_fn.sig.output;
     let block = &input_fn.block;
     let inputs = &input_fn.sig.inputs;
     let attrs = &input_fn.attrs;
@@ -173,12 +174,13 @@ pub fn tool(_attr: TokenStream, item: TokenStream) -> TokenStream {
     });
 
     let expanded = quote! {
-        #[allow(unused_variables)]
-        #vis fn #fn_name() -> Tool {
+        #vis fn #fn_name() #return_type  {
             use schemars::{schema_for, JsonSchema, Schema};
             use std::collections::HashMap;
+            use aisdk::core::tools::ToolExecute;
 
             #[derive(JsonSchema, Debug)]
+            #[allow(dead_code)]
             //#[schemars(deny_unknown_fields)]
             struct Function {
                 // Please add struct fields here

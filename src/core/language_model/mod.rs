@@ -485,7 +485,9 @@ pub enum LanguageModelStreamChunkType {
     Start,
     /// A chunk of generated text.
     Text(String),
-    /// A chunk of tool call data.
+    /// Reasoning summary text chunk
+    Reasoning(String),
+    /// Tool call argument chunk
     ToolCall(String),
     /// Successful completion of generation.
     End(AssistantMessage),

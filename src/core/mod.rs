@@ -7,13 +7,12 @@
 //! Key types like `GenerateTextCallOptions` and `GenerateTextResponse` are also
 //! re-exported for convenient access.
 
+pub mod client;
 pub mod language_model;
 pub mod messages;
 pub mod provider;
 pub(crate) mod tools;
 pub mod utils;
-
-pub use aisdk_macros::tool;
 
 // Re-export key components to provide a clean public API.
 pub use language_model::{

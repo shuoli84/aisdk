@@ -8,6 +8,9 @@ pub struct ProviderConfig {
     /// Default model for general tests
     pub default_model: &'static str,
 
+    /// Tool model for tool tests
+    pub tool_model: Option<&'static str>,
+
     /// Model for reasoning-specific tests (optional)
     pub reasoning_model: Option<&'static str>,
 
@@ -39,7 +42,7 @@ impl ProviderConfig {
 
     /// Get the appropriate model for tool tests
     pub fn tool_model(&self) -> &str {
-        self.default_model
+        self.tool_model.unwrap_or(self.default_model)
     }
 
     /// Get the appropriate model for streaming tests
@@ -105,9 +108,9 @@ macro_rules! generate_language_model_tests {
         use aisdk::core::{
             LanguageModelRequest, LanguageModelStreamChunkType, Message,
             language_model::{LanguageModelResponseContentType, StopReason},
-            tool,
-            tools::{Tool, ToolExecute},
+            tools::Tool,
         };
+        use aisdk_macros::tool;
         use dotenv::dotenv;
         use futures::StreamExt;
         use schemars::JsonSchema;
@@ -287,17 +290,17 @@ macro_rules! generate_language_model_stop_reason_tests {
             skip_if_no_api_key!();
 
             let result = LanguageModelRequest::builder()
-                .model(<$provider_type>::new($config.basic_model()))
-                .prompt("Tell me a short story.")
-                .stop_when(|_| true) // Always stop
-                .build()
-                .generate_text()
-                .await;
+             .model(<$provider_type>::new($config.basic_model()))
+             .prompt("just response with 'HI' nothing less nothing more")
+             .stop_when(|_| true) // Always stop
+             .build()
+             .generate_text()
+             .await;
 
             assert!(result.is_ok());
             let response = result.unwrap();
             assert!(matches!(response.stop_reason(), Some(StopReason::Hook)));
-        }
+         }
 
         #[tokio::test]
         async fn test_stop_reason_api_error() {
@@ -386,13 +389,14 @@ macro_rules! generate_language_model_streaming_tests {
             let mut stream = response.stream;
             let mut chunks_received = 0;
             while let Some(chunk) = stream.next().await {
-                chunks_received += 1;
-                // Just verify we get chunks
-                let _ = chunk;
+                if let LanguageModelStreamChunkType::Text(_) = chunk {
+                    chunks_received += 1;
+                }
             }
 
             assert!(chunks_received > 0);
         }
+
     };
 }
 
@@ -408,7 +412,7 @@ macro_rules! generate_language_model_tool_tests {
 
             #[tool]
             /// Returns the username
-            fn get_username() {
+            fn get_username() -> Tool {
                 Ok("ishak".to_string())
             }
 
@@ -426,12 +430,38 @@ macro_rules! generate_language_model_tool_tests {
         }
 
         #[tokio::test]
+        async fn test_generate_text_with_tools_input() {
+            skip_if_no_api_key!();
+
+            #[tool]
+            /// Returns the username
+            fn get_username(user_id: String) -> Tool {
+                match user_id.as_str() {
+                    "123" => Ok("sura".to_string()),
+                    _ => Ok("invalid".to_string()),
+                }
+            }
+
+            let response = LanguageModelRequest::builder()
+                .model(<$provider_type>::new($config.tool_model()))
+                .system("you are a helpful assistant.")
+                .prompt("What is the username with user id 123?")
+                .with_tool(get_username())
+                .build()
+                .generate_text()
+                .await
+                .unwrap();
+
+            assert!(response.text().unwrap().contains("sura"));
+        }
+
+        #[tokio::test]
         async fn test_generate_stream_with_tools() {
             skip_if_no_api_key!();
 
             #[tool]
             /// Returns the username
-            fn get_username() {
+            fn get_username() -> Tool {
                 Ok("ishak".to_string())
             }
 
@@ -455,6 +485,41 @@ macro_rules! generate_language_model_tool_tests {
             }
 
             assert!(buf.contains("ishak"));
+        }
+
+        #[tokio::test]
+        async fn test_generate_stream_with_tools_input() {
+            skip_if_no_api_key!();
+
+            #[tool]
+            /// Returns the username
+            fn get_username(user_id: String) -> Tool {
+                match user_id.as_str() {
+                    "123" => Ok("sura".to_string()),
+                    _ => Ok("invalid".to_string()),
+                }
+            }
+
+            let response = LanguageModelRequest::builder()
+                .model(<$provider_type>::new($config.tool_model()))
+                .system("You are a helpful assistant.")
+                .prompt("What is the username for user id 123?")
+                .with_tool(get_username())
+                .build()
+                .stream_text()
+                .await
+                .unwrap();
+
+            let mut stream = response.stream;
+
+            let mut buf = String::new();
+            while let Some(chunk) = stream.next().await {
+                if let LanguageModelStreamChunkType::Text(text) = chunk {
+                    buf.push_str(&text);
+                }
+            }
+
+            assert!(buf.contains("sura"));
         }
     };
 }
@@ -523,8 +588,6 @@ macro_rules! generate_language_model_schema_tests {
                 }
             }
 
-            println!("buf: {}", buf);
-
             let user: User = serde_json::from_str(&buf).unwrap();
 
             assert_eq!(user.name, "John Doe");
@@ -544,7 +607,7 @@ macro_rules! generate_language_model_hook_tests {
 
             #[tool]
             // Returns the neighborhood
-            fn get_neighborhood() -> Result<String> {
+            fn get_neighborhood() -> Tool {
                 Ok("ankocha".to_string())
             }
 
@@ -575,7 +638,7 @@ macro_rules! generate_language_model_hook_tests {
 
             #[tool]
             // Returns the neighbourhood
-            fn get_neighborhood() -> Result<String> {
+            fn get_neighborhood() -> Tool {
                 Ok("ankocha".to_string())
             }
 
@@ -606,7 +669,7 @@ macro_rules! generate_language_model_hook_tests {
             let log_finish = Arc::clone(&log);
 
             #[tool]
-            fn get_neighbourhood() -> Result<String> {
+            fn get_neighbourhood() -> Tool {
                 Ok("".to_string())
             }
 
@@ -641,7 +704,7 @@ macro_rules! generate_language_model_hook_tests {
             skip_if_no_api_key!();
 
             #[tool]
-            fn get_neighborhood() -> Result<String> {
+            fn get_neighborhood() -> Tool {
                 Ok("done".to_string())
             }
 
@@ -667,7 +730,7 @@ macro_rules! generate_language_model_hook_tests {
             skip_if_no_api_key!();
 
             #[tool]
-            fn get_neighbourhood() -> Result<String> {
+            fn get_neighbourhood() -> Tool {
                 Ok("ankocha".to_string())
             }
 
@@ -698,7 +761,7 @@ macro_rules! generate_language_model_hook_tests {
             skip_if_no_api_key!();
 
             #[tool]
-            fn get_neighbourhood() -> Result<String> {
+            fn get_neighbourhood() -> Tool {
                 Ok("anckocha".to_string())
             }
 
@@ -726,12 +789,12 @@ macro_rules! generate_language_model_hook_tests {
             let counter_clone = Arc::clone(&counter);
 
             #[tool]
-            fn get_neighbourhood() -> Result<String> {
+            fn get_neighbourhood() -> Tool {
                 Ok("You can find the neighborhood if you call the get_neighbourhood_2 tool".to_string())
             }
 
             #[tool]
-            fn get_neighbourhood_2() -> Result<String> {
+            fn get_neighbourhood_2() -> Tool {
                 Ok("ankocha".to_string())
             }
 
@@ -802,7 +865,7 @@ macro_rules! generate_language_model_hook_tests {
                 .model(<$provider_type>::new($config.basic_model()))
                 .prompt("Say hello")
                 .on_step_start(|opts| {
-                    opts.temperature = Some(0); // Mutate
+                    opts.system = Some("Updated system message!!!".to_string());
                 })
                 .build()
                 .generate_text()
@@ -811,6 +874,7 @@ macro_rules! generate_language_model_hook_tests {
 
             // Hard to verify mutation directly, but ensure no panic and response ok
             assert!(result.text().is_some());
+            assert_eq!(result.options.system.unwrap(), "Updated system message!!!");
         }
 
         #[tokio::test]
@@ -852,7 +916,7 @@ macro_rules! generate_language_model_hook_tests {
 
             #[tool]
             // Returns the username
-            fn get_username() -> Result<String> {
+            fn get_username() -> Tool {
                 Ok("ishak".to_string())
             }
 
@@ -962,7 +1026,7 @@ macro_rules! generate_language_model_step_id_tests {
             skip_if_no_api_key!();
 
             #[tool]
-            fn get_test_value() -> Result<String> {
+            fn get_test_value() -> Tool {
                 Ok("test_value".to_string())
             }
 

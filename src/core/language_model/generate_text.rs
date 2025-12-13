@@ -162,7 +162,7 @@ impl<M: LanguageModel> LanguageModelRequest<M> {
 #[derive(Debug, Clone)]
 pub struct GenerateTextResponse {
     /// The options that generated this response
-    options: LanguageModelOptions,
+    pub options: LanguageModelOptions,
 }
 
 impl GenerateTextResponse {
