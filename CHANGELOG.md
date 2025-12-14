@@ -24,8 +24,6 @@ Changelog entries are grouped by type, with the following types:
 - User does not need to import `aisdk::core::tools::ToolExecute` anymore to work with the tool macro
 - `LanguageModel` trait now requires `Clone + 'static` bounds (all providers must implement `Clone`)
 - Streaming implementation now uses `tokio::sync::mpsc` instead of `std::sync::mpsc`
-- `Anthropic` provider now implements `Clone`
-- Test tool functions use `_name` parameter to silence unused variable warnings
 
 
 ### Removed
@@ -36,9 +34,6 @@ Changelog entries are grouped by type, with the following types:
 
 ### Fixed
 - `aisdk-macros` `#[tool]` function unused variable warning even though it is used
-- Thread safety issues in streaming scenarios
-- Potential deadlocks with shared state during streaming
-- Compiler warnings for unused parameters in test tools
 
 ## [0.2.1] - 2025-12-02
 
