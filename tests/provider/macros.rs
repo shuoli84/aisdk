@@ -529,6 +529,8 @@ macro_rules! generate_language_model_tool_tests {
 
         #[tokio::test]
         async fn test_generate_stream_with_structs() {
+            skip_if_no_api_key!();
+
             // define tool function body, should return Result<String, String>
             #[allow(unused_variables)]
             let func = ToolExecute::new(Box::new(|inp: Value| {
