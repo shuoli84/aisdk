@@ -71,13 +71,9 @@ impl Debug for Tool {
 }
 
 impl Tool {
-    pub fn new() -> Self {
-        Self {
-            name: "".to_string(),
-            description: "".to_string(),
-            input_schema: Schema::default(),
-            execute: ToolExecute::default(),
-        }
+    /// Get builder to construct a new tool.
+    pub fn builder() -> ToolBuilder {
+        ToolBuilder::default()
     }
 }
 
