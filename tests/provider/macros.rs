@@ -105,6 +105,7 @@ macro_rules! generate_language_model_tests {
         skip_structured_output: $skip_structured_output:tt,
         skip_streaming: $skip_streaming:tt
     ) => {
+        use aisdk::core::tools::ToolExecute;
         use aisdk::core::{
             LanguageModelRequest, LanguageModelStreamChunkType, Message,
             language_model::{LanguageModelResponseContentType, StopReason},
@@ -116,6 +117,7 @@ macro_rules! generate_language_model_tests {
         use schemars::JsonSchema;
         #[allow(unused_imports)]
         use serde::Deserialize;
+        use serde_json::Value;
         use std::sync::{Arc, Mutex};
 
         // Helper macro for API key checking
@@ -523,6 +525,60 @@ macro_rules! generate_language_model_tool_tests {
             }
 
             assert!(buf.contains("sura"));
+        }
+
+        #[tokio::test]
+        async fn test_generate_stream_with_structs() {
+            // define tool function body, should return Result<String, String>
+            #[allow(unused_variables)]
+            let func = ToolExecute::new(Box::new(|inp: Value| {
+                // Ai SDK will pass in a json object with the following structure
+                // ```json
+                // {
+                //     "location": "New York"
+                // }
+                // ```
+                let location = inp.get("location").unwrap();
+                Ok(format!("Cloudy"))
+            }));
+
+            // define tool input structure
+            #[derive(schemars::JsonSchema, Debug)]
+            #[allow(dead_code)]
+            struct ToolInput {
+                location: String,
+            }
+
+            // change tool arguments to json schema
+            // Which will be similar to the following
+            // ```json
+            // "properties": {
+            //     "location": {
+            //         "type": "string"
+            //     }
+            // }
+            let schema = schemars::schema_for!(ToolInput);
+
+            // bring it all together
+            let get_weather_tool = Tool::builder()
+                .name("get-weather")
+                .description("Get the weather information given a location")
+                .input_schema(schema.clone())
+                .execute(func)
+                .build()
+                .unwrap();
+
+            // call the model with the tool
+            let result = LanguageModelRequest::builder()
+                .model(provider_with_settings!())
+                .system("You are a helpful assistant with access to tools.")
+                .prompt("What is the weather in New York?")
+                .with_tool(get_weather_tool) // you don't need to call it with.
+                .build()
+                .generate_text()
+                .await;
+
+            assert!(result.is_ok());
         }
     };
 }

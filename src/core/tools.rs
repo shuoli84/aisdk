@@ -79,6 +79,10 @@ impl Tool {
             execute: ToolExecute::default(),
         }
     }
+
+    pub fn builder() -> ToolBuilder {
+        ToolBuilder::default()
+    }
 }
 
 #[derive(Debug, Clone, Default)]
