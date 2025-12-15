@@ -187,7 +187,7 @@ def generate_capabilities_rs(provider_input: str, models: Dict[str, dict]) -> st
         '}',
     ])
 
-    return '\n'.join(lines)
+    return '\n'.join(lines) + '\n'
 
 def cleanup_models_dev(root: Path):
     """Cleanup models.dev directory."""

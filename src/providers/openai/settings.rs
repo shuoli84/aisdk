@@ -78,8 +78,10 @@ impl<M: ModelName> OpenAIProviderSettingsBuilder<M> {
             provider_name: self.provider_name.unwrap_or_else(|| "openai".to_string()),
         };
 
-        let mut options = OpenAIOptions::default();
-        options.model = M::MODEL_NAME.to_string();
+        let options = OpenAIOptions::builder()
+            .model(M::MODEL_NAME.to_string())
+            .build()
+            .unwrap();
 
         Ok(super::OpenAI {
             settings,

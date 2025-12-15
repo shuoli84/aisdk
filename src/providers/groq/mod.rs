@@ -19,16 +19,18 @@ pub struct Groq<M: ModelName> {
 }
 
 impl<M: ModelName> Groq<M> {
-    /// Creates a new Groq provider with default settings.
-    pub fn default() -> Groq<M> {
-        Groq {
-            inner: OpenAI::<M>::default(),
-        }
-    }
-
     /// Groq provider setting builder.
     pub fn builder() -> GroqProviderSettingsBuilder<M> {
         GroqProviderSettings::builder()
+    }
+}
+
+impl<M: ModelName> Default for Groq<M> {
+    /// Creates a new Groq provider with default settings.
+    fn default() -> Groq<M> {
+        Groq {
+            inner: OpenAI::<M>::default(),
+        }
     }
 }
 

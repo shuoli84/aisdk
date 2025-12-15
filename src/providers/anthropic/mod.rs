@@ -42,22 +42,26 @@ pub struct Anthropic<M: ModelName> {
 }
 
 impl<M: ModelName> Anthropic<M> {
+    /// Anthropic provider setting builder.
+    pub fn builder() -> AnthropicProviderSettingsBuilder<M> {
+        AnthropicProviderSettingsBuilder::default()
+    }
+}
+
+impl<M: ModelName> Default for Anthropic<M> {
     /// Creates a new AnthropAI provider with default settings.
-    pub fn default() -> Self {
+    fn default() -> Self {
         let settings = AnthropicProviderSettings::default();
-        let mut options = AnthropicOptions::default();
-        options.model = M::MODEL_NAME.to_string();
+        let options = AnthropicOptions::builder()
+            .model(M::MODEL_NAME.to_string())
+            .build()
+            .unwrap();
 
         Self {
             settings,
             options,
             _phantom: std::marker::PhantomData,
         }
-    }
-
-    /// Anthropic provider setting builder.
-    pub fn builder() -> AnthropicProviderSettingsBuilder<M> {
-        AnthropicProviderSettingsBuilder::default()
     }
 }
 

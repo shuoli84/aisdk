@@ -32,21 +32,26 @@ pub struct OpenAI<M: ModelName> {
 }
 
 impl<M: ModelName> OpenAI<M> {
+    /// OpenAI provider setting builder.
+    pub fn builder() -> OpenAIProviderSettingsBuilder<M> {
+        OpenAIProviderSettingsBuilder::default()
+    }
+}
+
+impl<M: ModelName> Default for OpenAI<M> {
     /// Creates a new OpenAI provider with default settings.
-    pub fn default() -> Self {
+    fn default() -> Self {
         let settings = OpenAIProviderSettings::default();
-        let mut options = OpenAIOptions::default();
-        options.model = M::MODEL_NAME.to_string();
+        let options = OpenAIOptions::builder()
+            .model(M::MODEL_NAME.to_string())
+            .build()
+            .unwrap();
 
         Self {
             settings,
             options,
             _phantom: std::marker::PhantomData,
         }
-    }
-    /// OpenAI provider setting builder.
-    pub fn builder() -> OpenAIProviderSettingsBuilder<M> {
-        OpenAIProviderSettingsBuilder::default()
     }
 }
 

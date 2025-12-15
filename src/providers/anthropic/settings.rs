@@ -23,17 +23,20 @@ pub struct AnthropicProviderSettings {
 }
 
 impl AnthropicProviderSettings {
-    pub fn default() -> Self {
+    /// Creates a new builder for `AnthropicProviderSettings`.
+    pub fn builder<M: ModelName>() -> AnthropicProviderSettingsBuilder<M> {
+        AnthropicProviderSettingsBuilder::default()
+    }
+}
+
+impl Default for AnthropicProviderSettings {
+    /// Returns the default settings for the Anthropic provider.
+    fn default() -> Self {
         Self {
             base_url: Url::parse("https://api.anthropic.com/v1/").unwrap(),
             api_key: std::env::var("ANTHROPIC_API_KEY").unwrap_or_default(),
             provider_name: "anthropic".to_string(),
         }
-    }
-
-    /// Creates a new builder for `AnthropicProviderSettings`.
-    pub fn builder<M: ModelName>() -> AnthropicProviderSettingsBuilder<M> {
-        AnthropicProviderSettingsBuilder::default()
     }
 }
 
