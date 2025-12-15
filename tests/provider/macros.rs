@@ -56,12 +56,15 @@ macro_rules! generate_language_model_tests {
         };
         use aisdk_macros::tool;
         use dotenv::dotenv;
-        use futures::StreamExt;
-        use schemars::JsonSchema;
-        #[allow(unused_imports)]
-        use serde::Deserialize;
-        use serde_json::Value;
         use std::sync::{Arc, Mutex};
+
+        #[allow(unused_imports)]
+        use {
+            futures::StreamExt,
+            schemars::JsonSchema,
+            serde::Deserialize,
+            serde_json::Value,
+        };
 
         // Helper macro for API key checking
         macro_rules! skip_if_no_api_key {
