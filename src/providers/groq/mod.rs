@@ -52,3 +52,6 @@ impl<M: ModelName> LanguageModel for Groq<M> {
         self.inner.stream_text(options).await
     }
 }
+
+// Re-exports Models for convenience
+pub use capabilities::*;
