@@ -42,12 +42,10 @@ impl<M: ModelName> Default for GroqBuilder<M> {
     /// Creates a new Groq provider with default settings.
     fn default() -> Self {
         let settings = GroqProviderSettings::default();
-        let inner = OpenAI::<M>::builder()
-            .provider_name(&settings.provider_name)
-            .base_url(settings.base_url.clone())
-            .api_key(&settings.api_key)
-            .build()
-            .unwrap();
+        let mut inner = OpenAI::default();
+        inner.settings.provider_name = settings.provider_name.clone();
+        inner.settings.base_url = settings.base_url.clone();
+        inner.settings.api_key = settings.api_key.clone();
 
         Self { settings, inner }
     }
