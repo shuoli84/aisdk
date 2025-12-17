@@ -67,7 +67,6 @@ impl<M: LanguageModel> LanguageModelRequest<M> {
                 };
 
                 while let Some(ref chunk) = response.next().await {
-                    println!("chunk: {:?}", chunk);
                     match chunk {
                         Ok(chunk) => {
                             for output in chunk {
