@@ -98,6 +98,7 @@ pub(crate) struct CodeExecutionResult {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(clippy::enum_variant_names)]
 #[serde(rename_all = "UPPERCASE")]
 pub(crate) enum Outcome {
     OutcomeUnspecified,
@@ -166,6 +167,7 @@ pub(crate) struct SafetySetting {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(clippy::enum_variant_names)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub(crate) enum SafetyCategory {
     HarmCategoryUnspecified,
@@ -209,6 +211,7 @@ pub(crate) struct Candidate {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(clippy::enum_variant_names)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub(crate) enum FinishReason {
     FinishReasonUnspecified,
@@ -261,6 +264,7 @@ pub(crate) struct PromptFeedback {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(clippy::enum_variant_names)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub(crate) enum BlockReason {
     BlockReasonUnspecified,

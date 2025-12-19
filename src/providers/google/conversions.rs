@@ -1,10 +1,11 @@
 //! Conversions between types used by the Google provider and the types used by the core library.
-use crate::core::language_model::{LanguageModelOptions, Usage};
+use crate::core::language_model::{LanguageModelOptions, LanguageModelResponseContentType, Usage};
 use crate::core::messages::{Message, TaggedMessage};
 use crate::core::tools::Tool;
 use crate::providers::google::client::types::{
     self, Content, FunctionDeclaration, GenerateContentRequest, Part, Role,
 };
+use crate::providers::google::extensions::GoogleToolMetadata;
 use serde_json::Value;
 
 impl From<Tool> for FunctionDeclaration {
@@ -99,20 +100,28 @@ impl From<Message> for Content {
             },
             Message::Assistant(a) => {
                 let part = match a.content {
-                    crate::core::language_model::LanguageModelResponseContentType::Text(t) => {
-                        Part {
-                            text: Some(t),
-                            ..Default::default()
-                        }
-                    }
-                    crate::core::language_model::LanguageModelResponseContentType::ToolCall(tc) => {
-                        Part {
+                    LanguageModelResponseContentType::Text(t) => Part {
+                        text: Some(t),
+                        ..Default::default()
+                    },
+                    LanguageModelResponseContentType::ToolCall(tc) => {
+                        let mut part = Part {
                             function_call: Some(types::FunctionCall {
-                                name: tc.tool.name,
-                                args: tc.input,
+                                name: tc.tool.name.clone(),
+                                args: tc.input.clone(),
                             }),
                             ..Default::default()
+                        };
+                        // Retrieve Gemini-specific ToolCall metadata from extensions
+                        if let Some(sig) = tc
+                            .extensions
+                            .get::<GoogleToolMetadata>()
+                            .thought_signature
+                            .as_ref()
+                        {
+                            part.thought_signature = Some(sig.clone());
                         }
+                        part
                     }
                     _ => Part::default(),
                 };

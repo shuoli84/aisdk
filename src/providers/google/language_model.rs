@@ -6,7 +6,7 @@ use crate::core::language_model::{
     LanguageModelStreamChunk, LanguageModelStreamChunkType, ProviderStream, Usage,
 };
 use crate::core::messages::AssistantMessage;
-use crate::providers::google::{Google, client::types};
+use crate::providers::google::{Google, client::types, extensions};
 use crate::{
     core::{language_model::LanguageModel, tools::ToolCallInfo},
     error::Result,
@@ -41,6 +41,12 @@ impl<M: ModelName> LanguageModel for Google<M> {
                 if let Some(fc) = part.function_call {
                     let mut tool_info = ToolCallInfo::new(fc.name);
                     tool_info.input(fc.args);
+                    if let Some(sig) = part.thought_signature {
+                        tool_info
+                            .extensions
+                            .get_mut::<extensions::GoogleToolMetadata>()
+                            .thought_signature = Some(sig);
+                    }
                     collected.push(LanguageModelResponseContentType::ToolCall(tool_info));
                 }
             }
@@ -59,62 +65,72 @@ impl<M: ModelName> LanguageModel for Google<M> {
 
         let google_stream = self.send_and_stream(&self.settings.base_url).await?;
 
-        let stream = google_stream.map(|evt_res| match evt_res {
-            Ok(types::GoogleStreamEvent::Response(response)) => {
-                let mut chunks = Vec::new();
-                let usage = response.usage_metadata.clone().map(Usage::from);
+        #[derive(Default)]
+        struct StreamState {
+            accumulated_text: String,
+            accumulated_tool_call: Option<ToolCallInfo>,
+            usage: Option<Usage>,
+        }
 
-                for candidate in &response.candidates {
-                    for part in &candidate.content.parts {
-                        if let Some(t) = &part.text {
-                            chunks.push(LanguageModelStreamChunk::Delta(
-                                LanguageModelStreamChunkType::Text(t.clone()),
-                            ));
-                        }
-                        if let Some(fc) = &part.function_call {
-                            chunks.push(LanguageModelStreamChunk::Delta(
-                                LanguageModelStreamChunkType::ToolCall(
-                                    serde_json::to_string(&fc).unwrap_or_default(),
-                                ),
-                            ));
-                        }
+        let stream = google_stream.scan(StreamState::default(), |state, evt_res| {
+            futures::future::ready(match evt_res {
+                Ok(types::GoogleStreamEvent::Response(response)) => {
+                    let mut chunks = Vec::new();
+
+                    if let Some(usage) = response.usage_metadata.clone().map(Usage::from) {
+                        state.usage = Some(usage);
                     }
 
-                    if candidate.finish_reason.is_some() {
-                        let content = if let Some(fc) = candidate
-                            .content
-                            .parts
-                            .iter()
-                            .find_map(|p| p.function_call.as_ref())
-                        {
-                            let mut tool_info = ToolCallInfo::new(fc.name.clone());
-                            tool_info.input(fc.args.clone());
-                            LanguageModelResponseContentType::ToolCall(tool_info)
-                        } else {
-                            let text = candidate
-                                .content
-                                .parts
-                                .iter()
-                                .filter_map(|p| p.text.clone())
-                                .collect::<Vec<_>>()
-                                .join("");
-                            LanguageModelResponseContentType::Text(text)
-                        };
+                    for candidate in &response.candidates {
+                        for part in &candidate.content.parts {
+                            if let Some(t) = &part.text {
+                                state.accumulated_text.push_str(t);
+                                chunks.push(LanguageModelStreamChunk::Delta(
+                                    LanguageModelStreamChunkType::Text(t.clone()),
+                                ));
+                            }
+                            if let Some(fc) = &part.function_call {
+                                let mut tool_info = ToolCallInfo::new(fc.name.clone());
+                                tool_info.input(fc.args.clone());
+                                if let Some(sig) = &part.thought_signature {
+                                    tool_info
+                                        .extensions
+                                        .get_mut::<extensions::GoogleToolMetadata>()
+                                        .thought_signature = Some(sig.clone());
+                                }
+                                state.accumulated_tool_call = Some(tool_info);
 
-                        chunks.push(LanguageModelStreamChunk::Done(AssistantMessage {
-                            content,
-                            usage: usage.clone(),
-                        }));
+                                chunks.push(LanguageModelStreamChunk::Delta(
+                                    LanguageModelStreamChunkType::ToolCall(
+                                        serde_json::to_string(&fc).unwrap_or_default(),
+                                    ),
+                                ));
+                            }
+                        }
+
+                        if candidate.finish_reason.is_some() {
+                            let content = if let Some(tc) = state.accumulated_tool_call.take() {
+                                LanguageModelResponseContentType::ToolCall(tc)
+                            } else {
+                                let text = std::mem::take(&mut state.accumulated_text);
+                                LanguageModelResponseContentType::Text(text)
+                            };
+
+                            chunks.push(LanguageModelStreamChunk::Done(AssistantMessage {
+                                content,
+                                usage: state.usage.clone(),
+                            }));
+                        }
                     }
+                    Some(Ok(chunks))
                 }
-                Ok(chunks)
-            }
-            Ok(types::GoogleStreamEvent::NotSupported(msg)) => {
-                Ok(vec![LanguageModelStreamChunk::Delta(
-                    LanguageModelStreamChunkType::NotSupported(msg),
-                )])
-            }
-            Err(e) => Err(e),
+                Ok(types::GoogleStreamEvent::NotSupported(msg)) => {
+                    Some(Ok(vec![LanguageModelStreamChunk::Delta(
+                        LanguageModelStreamChunkType::NotSupported(msg),
+                    )]))
+                }
+                Err(e) => Some(Err(e)),
+            })
         });
 
         Ok(Box::pin(stream))

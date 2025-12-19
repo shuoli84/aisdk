@@ -4,6 +4,7 @@
 pub mod capabilities;
 pub mod client;
 pub mod conversions;
+pub mod extensions;
 pub mod language_model;
 pub mod settings;
 
