@@ -35,7 +35,7 @@ impl<M: ModelName> Client for Google<M> {
         if self.options.streaming {
             return format!("models/{}:streamGenerateContent", self.options.model);
         };
-        return format!("models/{}:generateContent", self.options.model);
+        format!("models/{}:generateContent", self.options.model)
     }
 
     fn method(&self) -> reqwest::Method {
@@ -53,16 +53,15 @@ impl<M: ModelName> Client for Google<M> {
         if self.options.streaming {
             return vec![("alt", "sse")];
         }
-        return Vec::new();
+        Vec::new()
     }
 
     fn body(&self) -> reqwest::Body {
         if let Some(request) = &self.options.request {
             let body = serde_json::to_string(request).unwrap();
-            reqwest::Body::from(body)
-        } else {
-            reqwest::Body::from("{}")
-        }
+            return reqwest::Body::from(body);
+        };
+        reqwest::Body::from("{}")
     }
 
     fn parse_stream_sse(
