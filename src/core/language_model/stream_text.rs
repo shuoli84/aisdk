@@ -135,14 +135,15 @@ impl<M: LanguageModel> LanguageModelRequest<M> {
                                             options.stop_reason = Some(StopReason::Hook);
                                             break;
                                         }
-
-                                        let _ = tx.send(LanguageModelStreamChunkType::End(
-                                            final_msg.clone(),
-                                        ));
                                     }
-                                    LanguageModelStreamChunk::Delta(other) => {
-                                        let _ = tx.send(other.clone()); // propagate chunks
-                                    }
+                                    LanguageModelStreamChunk::Delta(other) => match other {
+                                        // Propagate text and reasoning chunks
+                                        LanguageModelStreamChunkType::Text(_)
+                                        | LanguageModelStreamChunkType::Reasoning(_) => {
+                                            let _ = tx.send(other.clone());
+                                        }
+                                        _ => {}
+                                    },
                                 }
                             }
                         }
