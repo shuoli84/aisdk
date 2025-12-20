@@ -7,7 +7,6 @@ use serde_json::Value;
 use uuid;
 
 use crate::core::LanguageModelStreamChunkType;
-use crate::core::StreamTextResponse;
 
 /// Vercel's ai-sdk UI message chunk types.
 /// These represent the JSON chunks sent over SSE to the frontend.
@@ -214,7 +213,7 @@ impl<C, T> VercelUIStreamBuilder<C, T> {
     }
 }
 
-impl StreamTextResponse {
+impl crate::core::StreamTextResponse {
     /// Converts this `StreamTextResponse` into a stream of `VercelUIStream` chunks.
     ///
     /// Transforms the underlying language model stream into Vercel-compatible UI chunks (e.g., text deltas,
@@ -290,5 +289,86 @@ impl StreamTextResponse {
 
             futures::future::ready(ui_chunk.map(Ok))
         })
+    }
+}
+
+/// Represents a part of a UI message from Vercel's useChat hook.
+#[derive(Deserialize, Debug)]
+pub struct VercelUIMessagePart {
+    /// The text content of the part.
+    pub text: String,
+    /// The type of the part (e.g., "text").
+    #[serde(rename = "type")]
+    pub part_type: String,
+}
+
+/// Represents a UI message from Vercel's useChat hook.
+#[derive(Deserialize, Debug)]
+pub struct VercelUIMessage {
+    /// Unique identifier for the message.
+    pub id: String,
+    /// Role of the message sender ("user", "assistant", "system").
+    pub role: String,
+    /// Array of message parts (e.g., text content).
+    pub parts: Vec<VercelUIMessagePart>,
+}
+
+/// Represents a request body from Vercel's useChat hook.
+#[derive(Deserialize, Debug)]
+pub struct VercelUIRequest {
+    /// Unique identifier for the chat session.
+    pub id: String,
+    /// Array of UI messages from the frontend.
+    pub messages: Vec<VercelUIMessage>,
+    /// Trigger indicating the action (e.g., "submit-message").
+    pub trigger: String,
+}
+
+impl crate::core::Message {
+    /// Converts a slice of Vercel UI messages to the `aisdk::core::Message` format.
+    ///
+    /// This function extracts text content from UI message parts and maps roles to the
+    /// corresponding `Message` variants. Currently only "text" parts are supported; other part types
+    /// (e.g., files, tools) are ignored.
+    ///
+    /// # Parameters
+    /// - `ui_messages`: A slice of `VercelUIMessage` to convert.
+    ///
+    /// # Returns
+    /// A vector of `Message` instances.
+    ///
+    /// # Notes
+    /// - Joins multiple text parts into a single string.
+    /// - TODO: Add support for file parts (e.g., map to URLs in content).
+    /// - TODO: Add support for tool parts (e.g., map to `Tool` messages).
+    pub fn from_vercel_ui_message(
+        ui_messages: &[VercelUIMessage],
+    ) -> crate::core::messages::Messages {
+        ui_messages
+            .iter()
+            .filter_map(|msg| {
+                let content = msg
+                    .parts
+                    .iter()
+                    .filter(|part| part.part_type == "text")
+                    .map(|part| part.text.clone())
+                    .collect::<Vec<_>>()
+                    .join("");
+
+                match msg.role.as_str() {
+                    "system" => Some(crate::core::messages::Message::System(content.into())),
+                    "user" => Some(crate::core::messages::Message::User(content.into())),
+                    "assistant" => Some(crate::core::messages::Message::Assistant(content.into())),
+                    _ => None,
+                }
+            })
+            .collect()
+    }
+}
+
+/// Converts a VercelUIRequest into native aisdk::core::messages::Message
+impl From<VercelUIRequest> for Vec<crate::core::messages::Message> {
+    fn from(request: VercelUIRequest) -> Self {
+        crate::core::messages::Message::from_vercel_ui_message(&request.messages)
     }
 }

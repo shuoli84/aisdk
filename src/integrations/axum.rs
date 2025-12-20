@@ -1,6 +1,5 @@
 //! Integration with Axum.
 
-use crate::core::StreamTextResponse;
 use crate::integrations::vercel_aisdk_ui::VercelUIStreamBuilder;
 use axum::response::Sse;
 use axum::response::sse::{Event, KeepAliveStream};
@@ -14,8 +13,8 @@ pub type AxumSseResponse = Sse<
 >;
 
 /// Implement From trait for StreamTextResponse to AxumSseResponse.
-impl From<StreamTextResponse> for AxumSseResponse {
-    fn from(response: StreamTextResponse) -> Self {
+impl From<crate::core::StreamTextResponse> for AxumSseResponse {
+    fn from(response: crate::core::StreamTextResponse) -> Self {
         response
             .to_axum_vercel_ui_stream()
             .send_reasoning()
@@ -25,7 +24,7 @@ impl From<StreamTextResponse> for AxumSseResponse {
     }
 }
 
-impl StreamTextResponse {
+impl crate::core::StreamTextResponse {
     /// Creates a builder for configuring a Vercel AI SDK UI compatible stream response from this `StreamTextResponse`.
     ///
     /// Allows configuration of options such as sending reasoning chunks, start signals, finish signals,
