@@ -39,13 +39,16 @@ pub(crate) trait Client {
             .body(self.body())
             .send()
             .await
-            .and_then(|response| response.error_for_status())
-            .map_err(|e| Error::ApiError(e.to_string()));
+            .map_err(|e| Error::ApiError(e.to_string()))?;
 
-        resp?
-            .json::<Self::Response>()
-            .await
-            .map_err(|e| Error::ApiError(e.to_string()))
+        let status = resp.status();
+        let resp_text = resp.text().await.unwrap();
+
+        if !status.is_success() {
+            return Err(Error::ApiError(format!("HTTP {} - {}", status, resp_text)));
+        }
+
+        Ok(serde_json::from_str(&resp_text).unwrap())
     }
 
     /// Parses an SSE event into a StreamEvent ( ProviderStreamEvent )
