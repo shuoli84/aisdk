@@ -4,7 +4,7 @@
 //! and options for generating text or streaming responses. It includes a type-state builder
 //! pattern to ensure requests are constructed correctly and safely.
 
-use crate::core::Message;
+use crate::core::Messages;
 use crate::core::capabilities::*;
 use crate::core::language_model::{LanguageModel, LanguageModelOptions};
 use crate::core::tools::Tool;
@@ -207,7 +207,7 @@ impl<M: LanguageModel> LanguageModelRequestBuilder<M, SystemStage> {
     /// # Returns
     ///
     /// The builder in the [`OptionsStage`] state.
-    pub fn messages(self, messages: Vec<Message>) -> LanguageModelRequestBuilder<M, OptionsStage> {
+    pub fn messages(self, messages: Messages) -> LanguageModelRequestBuilder<M, OptionsStage> {
         LanguageModelRequestBuilder {
             model: self.model,
             prompt: self.prompt,
@@ -258,7 +258,7 @@ impl<M: LanguageModel> LanguageModelRequestBuilder<M, ConversationStage> {
     /// # Returns
     ///
     /// The builder in the [`OptionsStage`] state.
-    pub fn messages(self, messages: Vec<Message>) -> LanguageModelRequestBuilder<M, OptionsStage>
+    pub fn messages(self, messages: Messages) -> LanguageModelRequestBuilder<M, OptionsStage>
     where
         M: TextInputSupport,
     {
