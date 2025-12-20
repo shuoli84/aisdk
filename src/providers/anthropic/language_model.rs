@@ -107,7 +107,8 @@ impl<M: ModelName> LanguageModel for Anthropic<M> {
                         LanguageModelStreamChunkType::NotSupported(format!("AnthropicStreamEvent::{event}")),
                     )]
                 };
-                futures::future::ready(match evt_res {
+                futures::future::ready({
+                    match dbg!(evt_res) {
                     Ok(event) => match event {
                         AnthropicStreamEvent::MessageStart { .. } => {
                             Some(Ok(vec![LanguageModelStreamChunk::Delta(
@@ -205,7 +206,12 @@ impl<M: ModelName> LanguageModel for Anthropic<M> {
                                         name,
                                         accumulated_json,
                                     } => {
-                                        if let Ok(input) = serde_json::from_str(accumulated_json) {
+                                        let json_str = if accumulated_json.trim().is_empty() {
+                                            "{}"
+                                        } else {
+                                            accumulated_json
+                                        };
+                                        if let Ok(input) = serde_json::from_str(json_str) {
                                             collected.push(
                                                 LanguageModelResponseContentType::ToolCall(
                                                     ToolCallInfo {
@@ -254,7 +260,7 @@ impl<M: ModelName> LanguageModel for Anthropic<M> {
                         }
                     },
                     Err(e) => Some(Err(e)),
-                })
+                }})
             },
         );
 
