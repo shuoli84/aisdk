@@ -162,7 +162,15 @@ impl<M: ModelName> LanguageModel for Anthropic<M> {
                                             LanguageModelStreamChunkType::Text(delta_text),
                                         )]))
                                     }
-                                    // TODO: handle Reasoning delta event
+                                    (
+                                        AccumulatedBlock::Thinking(thinking),
+                                        AnthropicDelta::ThinkingDelta { thinking: delta_thinking },
+                                    ) => {
+                                        thinking.push_str(&delta_thinking);
+                                        Some(Ok(vec![LanguageModelStreamChunk::Delta(
+                                            LanguageModelStreamChunkType::Text(delta_thinking),
+                                        )]))
+                                    }
                                     (
                                         AccumulatedBlock::ToolUse {
                                             accumulated_json, ..
