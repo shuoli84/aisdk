@@ -15,6 +15,7 @@ use crate::providers::anthropic::client::{
     AnthropicContentBlock, AnthropicDelta, AnthropicMessageDeltaUsage, AnthropicOptions,
     AnthropicStreamEvent,
 };
+use crate::providers::anthropic::extensions;
 use crate::{core::language_model::LanguageModel, error::Result};
 use async_trait::async_trait;
 use futures::StreamExt;
@@ -49,11 +50,20 @@ impl<M: ModelName> LanguageModel for Anthropic<M> {
                     signature,
                     thinking,
                 } => {
-                    collected.push(LanguageModelResponseContentType::Reasoning(signature));
-                    collected.push(LanguageModelResponseContentType::Reasoning(thinking));
+                    let extensions = Extensions::default();
+                    extensions
+                        .get_mut::<extensions::AnthropicThinkingMetadata>()
+                        .signature = Some(signature);
+                    collected.push(LanguageModelResponseContentType::Reasoning {
+                        content: thinking,
+                        extensions,
+                    });
                 }
                 AnthropicContentBlock::RedactedThinking { data } => {
-                    collected.push(LanguageModelResponseContentType::Reasoning(data));
+                    collected.push(LanguageModelResponseContentType::Reasoning {
+                        content: data,
+                        extensions: Extensions::default(),
+                    });
                 }
                 AnthropicContentBlock::ToolUse { id, input, name } => {
                     collected.push(LanguageModelResponseContentType::ToolCall(ToolCallInfo {
@@ -92,7 +102,10 @@ impl<M: ModelName> LanguageModel for Anthropic<M> {
         #[derive(Debug)]
         enum AccumulatedBlock {
             Text(String),
-            Thinking(String),
+            Thinking {
+                thinking: String,
+                signature: Option<String>,
+            },
             RedactedThinking(String),
             ToolUse {
                 id: String,
@@ -127,10 +140,13 @@ impl<M: ModelName> LanguageModel for Anthropic<M> {
                                     .insert(index, AccumulatedBlock::Text(String::new()));
                                 Some(Ok(unsupported("ContentBlockStart::Text")))
                             }
-                            AnthropicContentBlock::Thinking { .. } => {
+                            AnthropicContentBlock::Thinking { signature, .. } => {
                                 state
                                     .content_blocks
-                                    .insert(index, AccumulatedBlock::Thinking(String::new()));
+                                    .insert(index, AccumulatedBlock::Thinking {
+                                        thinking: String::new(),
+                                        signature: Some(signature),
+                                    });
                                 Some(Ok(unsupported("ContentBlockStart::Thinking")))
                             }
                             AnthropicContentBlock::RedactedThinking { data } => {
@@ -165,12 +181,26 @@ impl<M: ModelName> LanguageModel for Anthropic<M> {
                                         )]))
                                     }
                                     (
-                                        AccumulatedBlock::Thinking(thinking),
+                                        AccumulatedBlock::Thinking { thinking, .. },
                                         AnthropicDelta::ThinkingDelta { thinking: delta_thinking },
                                     ) => {
                                         thinking.push_str(&delta_thinking);
                                         Some(Ok(vec![LanguageModelStreamChunk::Delta(
                                             LanguageModelStreamChunkType::Text(delta_thinking),
+                                        )]))
+                                    }
+                                    (
+                                        AccumulatedBlock::Thinking { signature, .. },
+                                        AnthropicDelta::SignatureDelta { signature: delta_signature },
+                                    ) => {
+                                        // Accumulate signature if needed
+                                        if let Some(sig) = signature {
+                                            sig.push_str(&delta_signature);
+                                        } else {
+                                            *signature = Some(delta_signature.clone());
+                                        }
+                                        Some(Ok(vec![LanguageModelStreamChunk::Delta(
+                                            LanguageModelStreamChunkType::NotSupported("SignatureDelta".to_string()),
                                         )]))
                                     }
                                     (
@@ -203,13 +233,23 @@ impl<M: ModelName> LanguageModel for Anthropic<M> {
                                 match block {
                                     AccumulatedBlock::Text(text) => collected
                                         .push(LanguageModelResponseContentType::new(text.clone())),
-                                    AccumulatedBlock::Thinking(thinking) => {
-                                        collected.push(LanguageModelResponseContentType::Reasoning(
-                                            thinking.clone(),
-                                        ))
+                                    AccumulatedBlock::Thinking { thinking, signature } => {
+                                        let extensions = Extensions::default();
+                                        if let Some(sig) = signature {
+                                            extensions
+                                                .get_mut::<extensions::AnthropicThinkingMetadata>()
+                                                .signature = Some(sig.clone());
+                                        }
+                                        collected.push(LanguageModelResponseContentType::Reasoning {
+                                            content: thinking.clone(),
+                                            extensions,
+                                        })
                                     }
                                     AccumulatedBlock::RedactedThinking(data) => collected.push(
-                                        LanguageModelResponseContentType::Reasoning(data.clone()),
+                                        LanguageModelResponseContentType::Reasoning {
+                                            content: data.clone(),
+                                            extensions: Extensions::default(),
+                                        },
                                     ),
                                     AccumulatedBlock::ToolUse {
                                         id,

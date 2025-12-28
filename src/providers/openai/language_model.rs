@@ -112,9 +112,10 @@ impl<M: ModelName> LanguageModel for OpenAI<M> {
                         types::MessageItem::Reasoning { summary, .. } => {
                             if let Some(types::ReasoningSummary { text, .. }) = summary.first() {
                                 result.push(LanguageModelStreamChunk::Done(AssistantMessage {
-                                    content: LanguageModelResponseContentType::Reasoning(
-                                        text.to_owned(),
-                                    ),
+                                    content: LanguageModelResponseContentType::Reasoning {
+                                        content: text.to_owned(),
+                                        extensions: crate::extensions::Extensions::default(),
+                                    },
                                     usage: Some(usage.clone()),
                                 }));
                             }

@@ -6,6 +6,7 @@ use crate::providers::anthropic::client::{
     AnthropicAssistantMessageParamContent, AnthropicMessageDeltaUsage, AnthropicMessageParam,
     AnthropicOptions, AnthropicThinking, AnthropicTool, AnthropicUsage,
 };
+use crate::providers::anthropic::extensions;
 
 impl From<LanguageModelOptions> for AnthropicOptions {
     fn from(options: LanguageModelOptions) -> Self {
@@ -56,12 +57,21 @@ impl From<LanguageModelOptions> for AnthropicOptions {
                             }],
                         });
                     }
-                    LanguageModelResponseContentType::Reasoning(reasoning) => {
+                    LanguageModelResponseContentType::Reasoning {
+                        content,
+                        extensions,
+                    } => {
+                        // Retrieve Anthropic-specific signature from extensions
+                        let signature = extensions
+                            .get::<extensions::AnthropicThinkingMetadata>()
+                            .signature
+                            .clone()
+                            .unwrap_or_else(|| content.clone());
+
                         messages.push(AnthropicMessageParam::Assistant {
                             content: vec![AnthropicAssistantMessageParamContent::Thinking {
-                                thinking: reasoning.clone(),
-                                signature: reasoning, // TODO: handle antropic thinking
-                                                      // signatures appropriately
+                                thinking: content.clone(),
+                                signature,
                             }],
                         });
                     }

@@ -975,7 +975,7 @@ macro_rules! generate_language_model_hook_tests {
                             LanguageModelResponseContentType::Text(_) => {
                                 *text_clone.lock().unwrap() = true;
                             }
-                            LanguageModelResponseContentType::Reasoning(_) => {
+                            LanguageModelResponseContentType::Reasoning { .. } => {
                                 *text_clone.lock().unwrap() = true;
                             }
                             _ => {}

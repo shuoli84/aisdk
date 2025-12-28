@@ -120,12 +120,12 @@ impl From<Message> for Option<types::InputItem> {
                         type_: "function_call".to_string(),
                     }))
                 }
-                LanguageModelResponseContentType::Reasoning(ref reason) => {
+                LanguageModelResponseContentType::Reasoning { ref content, .. } => {
                     Some(types::InputItem::Item(types::MessageItem::Reasoning {
                         id: None,
                         summary: vec![types::ReasoningSummary {
                             type_: "summary_text".to_string(),
-                            text: reason.clone(),
+                            text: content.clone(),
                         }],
                         type_: "reasoning".to_string(),
                         content: None,

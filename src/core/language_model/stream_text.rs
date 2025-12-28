@@ -131,16 +131,18 @@ impl<M: LanguageModel> LanguageModelRequest<M> {
                                                 ));
                                                 options.stop_reason = Some(StopReason::Finish);
                                             }
-                                            LanguageModelResponseContentType::Reasoning(
-                                                ref reason,
-                                            ) => {
+                                            LanguageModelResponseContentType::Reasoning {
+                                                ref content,
+                                                ref extensions,
+                                            } => {
                                                 options.messages.push(TaggedMessage::new(
                                                 current_step_id,
                                                 Message::Assistant(AssistantMessage {
                                                     content:
-                                                        LanguageModelResponseContentType::Reasoning(
-                                                            reason.clone(),
-                                                        ),
+                                                        LanguageModelResponseContentType::Reasoning {
+                                                            content: content.clone(),
+                                                            extensions: extensions.clone(),
+                                                        },
                                                     usage: final_msg.usage.clone(),
                                                     }),
                                                 ));
