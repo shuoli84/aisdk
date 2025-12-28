@@ -47,7 +47,10 @@ pub(crate) trait Client {
                 .map_err(|e| Error::ApiError(e.to_string()))?;
 
             let status = resp.status();
-            let resp_text = resp.text().await.unwrap();
+            let resp_text = resp
+                .text()
+                .await
+                .map_err(|e| Error::ApiError(format!("Failed to read response: {}", e)))?;
 
             if status.is_success() {
                 return Ok(serde_json::from_str(&resp_text).unwrap());
@@ -55,10 +58,6 @@ pub(crate) trait Client {
 
             // Check for 429 rate limit error and retry
             if status == reqwest::StatusCode::TOO_MANY_REQUESTS && retry_count < max_retries {
-                // println!(
-                //     "Retrying request x{}, next delay {:?}",
-                //     retry_count, wait_time
-                // );
                 retry_count += 1;
                 tokio::time::sleep(wait_time).await;
                 wait_time *= 2; // Exponential backoff
