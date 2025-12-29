@@ -100,54 +100,19 @@ pub(crate) trait Client {
             .join(&self.path())
             .map_err(|_| Error::InvalidInput("Failed to join base URL and path".into()))?;
 
-        let max_retries = 5;
-        let mut retry_count = 0;
-        let mut wait_time = std::time::Duration::from_secs(1);
-
-        let events_stream = loop {
-            // First, check the response status before establishing the event source
-            let response = client
-                .request(self.method(), url.clone())
-                .headers(self.headers())
-                .query(&self.query_params())
-                .body(self.body())
-                .send()
-                .await
-                .map_err(|e| Error::ApiError {
-                    status_code: e.status(),
-                    details: format!("Request error: {}", e),
-                })?;
-
-            let status = response.status();
-
-            // Check for 429 rate limit error and retry
-            if status == reqwest::StatusCode::TOO_MANY_REQUESTS && retry_count < max_retries {
-                retry_count += 1;
-                tokio::time::sleep(wait_time).await;
-                wait_time *= 2; // Exponential backoff
-                continue;
-            }
-
-            if !status.is_success() {
-                let error_text = response.text().await.unwrap_or_default();
-                return Err(Error::ApiError {
-                    status_code: Some(status),
-                    details: error_text,
-                });
-            }
-
-            // If successful, establish the event source stream
-            break client
-                .request(self.method(), url.clone())
-                .headers(self.headers())
-                .query(&self.query_params())
-                .body(self.body())
-                .eventsource()
-                .map_err(|e| Error::ApiError {
-                    status_code: None,
-                    details: format!("SSE stream error: {}", e),
-                })?;
-        };
+        // Establish the event source stream directly
+        // Note: Status code errors (including 429) will be surfaced as stream events
+        // and should be handled by retry logic in the provider's stream_text() method
+        let events_stream = client
+            .request(self.method(), url.clone())
+            .headers(self.headers())
+            .query(&self.query_params())
+            .body(self.body())
+            .eventsource()
+            .map_err(|e| Error::ApiError {
+                status_code: None,
+                details: format!("SSE stream error: {}", e),
+            })?;
 
         // Map events to deserialized StreamEvent ( ProviderStreamEvent )
         let mapped_stream = events_stream.map(|event_result| Self::parse_stream_sse(event_result));

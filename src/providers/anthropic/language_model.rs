@@ -91,7 +91,28 @@ impl<M: ModelName> LanguageModel for Anthropic<M> {
         options.model = self.options.model.clone();
         self.options = options;
 
-        let response = self.send_and_stream(self.settings.base_url.clone()).await?;
+        // Retry logic for rate limiting
+        let max_retries = 5;
+        let mut retry_count = 0;
+        let mut wait_time = std::time::Duration::from_secs(1);
+
+        let response = loop {
+            match self.send_and_stream(self.settings.base_url.clone()).await {
+                Ok(stream) => break stream,
+                Err(crate::error::Error::ApiError {
+                    status_code: Some(status),
+                    ..
+                }) if status == reqwest::StatusCode::TOO_MANY_REQUESTS
+                    && retry_count < max_retries =>
+                {
+                    retry_count += 1;
+                    tokio::time::sleep(wait_time).await;
+                    wait_time *= 2; // Exponential backoff
+                    continue;
+                }
+                Err(e) => return Err(e),
+            }
+        };
 
         #[derive(Default)]
         struct StreamState {
