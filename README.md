@@ -97,7 +97,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-### Stractured Output
+### Structured Output
 
 Define your target output format.
 
@@ -148,7 +148,7 @@ The AISDK prompt feature provides a powerful, file-based template system for man
 - [x] Agents
 - [x] Tool Execution
 - [x] Prompt Templating
-- [x] Stractured Output (JSON Schema)
+- [x] Structured Output (JSON Schema)
 - [x] Language Model Request Support (Text Generation, Streaming)
 - [x] Compatible with [Vercel AI SDK UI](https://ai-sdk.dev/docs/ai-sdk-ui/overview) (React, Solid, Vue, Svelte, …)
 - [ ] Embedding Model Request Support
