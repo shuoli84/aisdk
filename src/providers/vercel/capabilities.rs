@@ -235,19 +235,19 @@ model_capabilities! {
         BflFluxPro10Fill {
             model_name: "bfl/flux-pro-1.0-fill",
             constructor_name: bfl_flux_pro_1_0_fill,
-            display_name: "FLUX.1 Fill [pro]",
+            display_name: "FLUX.1 Fill \\[pro\\]",
             capabilities: [ImageOutputSupport, TextInputSupport]
         },
         BflFluxPro11 {
             model_name: "bfl/flux-pro-1.1",
             constructor_name: bfl_flux_pro_1_1,
-            display_name: "FLUX1.1 [pro]",
+            display_name: "FLUX1.1 \\[pro\\]",
             capabilities: [ImageOutputSupport, TextInputSupport]
         },
         BflFluxPro11Ultra {
             model_name: "bfl/flux-pro-1.1-ultra",
             constructor_name: bfl_flux_pro_1_1_ultra,
-            display_name: "FLUX1.1 [pro] Ultra",
+            display_name: "FLUX1.1 \\[pro\\] Ultra",
             capabilities: [ImageOutputSupport, TextInputSupport]
         },
         BytedanceSeed16 {
