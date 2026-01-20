@@ -3,10 +3,10 @@
 //! This module provides utilities for managing and rendering prompt templates
 //! using the Tera templating engine.
 
-use crate::error::Error;
+use crate::error::{Error, Result};
 use derive_builder::Builder;
 use std::{collections::HashMap, path::PathBuf};
-use tera::Tera;
+use tera::{Context, Tera};
 
 /// A lightweight wrapper around the Tera templating engine.
 pub struct PromptEnv {
@@ -16,7 +16,7 @@ pub struct PromptEnv {
 impl Default for PromptEnv {
     /// Creates a new prompt environment from in ./prompts/**/*.
     fn default() -> Self {
-        PromptEnv::new(PathBuf::from("prompts/**/*"))
+        PromptEnv::new(PathBuf::from("prompts"))
     }
 }
 
@@ -27,6 +27,26 @@ impl PromptEnv {
             template: Tera::new(&format!("{}/**/*", path.display()))
                 .expect("failed to load templates to tera"),
         }
+    }
+
+    /// Generate a prompt from a template file.
+    pub fn generate_prompt(
+        &self,
+        path: &str,
+        variables: HashMap<String, String>,
+    ) -> Result<String> {
+        let prompt = PromptBuilder::default()
+            .path(path.to_string())
+            .variables(variables)
+            .build()
+            .map_err(|e| Error::PromptError(format!("error building prompt: {:?}", e)))?;
+
+        let ctx = Context::from_serialize(prompt.variables.clone())
+            .map_err(|e| Error::PromptError(format!("error creating variable context: {:?}", e)))?;
+
+        self.template
+            .render(&prompt.path, &ctx)
+            .map_err(|e| Error::PromptError(format!("error rendering prompt: {:?}", e)))
     }
 }
 
