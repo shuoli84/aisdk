@@ -19,6 +19,7 @@ Changelog entries are grouped by type, with the following types:
 ### Added
 - Added `Vercel AI Geatway` provider
 - Added `OpenRouter` provider
+- Added `DeepSeek` provider
 
 ### Changed
 - Changed Groq provider to use OpenAI's ChatCompletions API

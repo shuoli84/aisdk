@@ -31,6 +31,11 @@ pub mod openrouter;
 #[cfg(feature = "openrouter")]
 pub use openrouter::OpenRouter;
 
+#[cfg(feature = "deepseek")]
+pub mod deepseek;
+#[cfg(feature = "deepseek")]
+pub use deepseek::DeepSeek;
+
 // Internal module for OpenAI Chat Completions API compatible providers
 #[cfg(feature = "openaichatcompletions")]
 pub(crate) mod openai_chat_completions;
