@@ -1,5 +1,5 @@
 //! Client implementation for the Google provider.
-use crate::core::client::Client;
+use crate::core::client::LanguageModelClient;
 use crate::error::{Error, Result};
 use crate::providers::google::{Google, ModelName};
 use derive_builder::Builder;
@@ -27,7 +27,7 @@ impl GoogleOptions {
     }
 }
 
-impl<M: ModelName> Client for Google<M> {
+impl<M: ModelName> LanguageModelClient for Google<M> {
     type Response = types::GenerateContentResponse;
     type StreamEvent = types::GoogleStreamEvent;
 

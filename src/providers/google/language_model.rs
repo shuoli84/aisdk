@@ -1,6 +1,6 @@
 //! Language model implementation for the Google provider.
 use crate::core::capabilities::ModelName;
-use crate::core::client::Client;
+use crate::core::client::LanguageModelClient;
 use crate::core::language_model::{
     LanguageModelOptions, LanguageModelResponse, LanguageModelResponseContentType,
     LanguageModelStreamChunk, LanguageModelStreamChunkType, ProviderStream, Usage,

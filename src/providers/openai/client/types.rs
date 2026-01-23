@@ -374,3 +374,24 @@ pub(crate) struct TopLogProbs {
     pub logprob: f64,
     pub token: String,
 }
+
+/// See [OpenAI Embedding API](https://platform.openai.com/docs/api-reference/embeddings/object)
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct Embedding {
+    pub embedding: Vec<f32>,
+    pub index: usize,
+    pub object: String, // always "embedding"
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[allow(dead_code)]
+pub struct EmbeddingOptions {
+    // TODO: The input must not exceed the max input tokens for the model
+    // (8192 tokens for all embedding models), cannot be an empty string, and
+    // any array must be 2048 dimensions or less.
+    pub input: Vec<String>,
+    pub model: String,
+    pub user: Option<String>,
+    pub dimensions: Option<usize>,
+    pub encoding_format: Option<String>,
+}

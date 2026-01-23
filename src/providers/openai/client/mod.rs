@@ -6,7 +6,7 @@ pub(crate) mod types;
 
 pub(crate) use types::*;
 
-use crate::core::client::Client;
+use crate::core::client::{EmbeddingClient, LanguageModelClient};
 use crate::error::Error;
 use crate::providers::openai::{ModelName, OpenAI};
 use derive_builder::Builder;
@@ -50,7 +50,7 @@ impl OpenAIOptions {
     }
 }
 
-impl<M: ModelName> Client for OpenAI<M> {
+impl<M: ModelName> LanguageModelClient for OpenAI<M> {
     type Response = types::OpenAiResponse;
     type StreamEvent = types::OpenAiStreamEvent;
 
@@ -125,5 +125,41 @@ impl<M: ModelName> Client for OpenAI<M> {
         matches!(event, types::OpenAiStreamEvent::ResponseCompleted { .. })
             || matches!(event, types::OpenAiStreamEvent::NotSupported(json) if json == "[END]")
             || matches!(event, types::OpenAiStreamEvent::ResponseError { .. })
+    }
+}
+
+impl<M: ModelName> EmbeddingClient for OpenAI<M> {
+    type Response = types::Embedding;
+
+    fn path(&self) -> String {
+        "/v1/embeddings".to_string()
+    }
+
+    fn method(&self) -> reqwest::Method {
+        reqwest::Method::POST
+    }
+
+    fn headers(&self) -> reqwest::header::HeaderMap {
+        // Default headers
+        let mut default_headers = reqwest::header::HeaderMap::new();
+        default_headers.insert(CONTENT_TYPE, "application/json".parse().unwrap());
+        // Authorization
+        default_headers.insert(
+            "Authorization",
+            format!("Bearer {}", self.settings.api_key.clone())
+                .parse()
+                .unwrap(),
+        );
+
+        default_headers
+    }
+
+    fn query_params(&self) -> Vec<(&str, &str)> {
+        Vec::new()
+    }
+
+    fn body(&self) -> reqwest::Body {
+        let body = serde_json::to_string(&self.options).unwrap();
+        reqwest::Body::from(body)
     }
 }

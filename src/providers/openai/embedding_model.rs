@@ -1,22 +1,18 @@
 //! Embedding model implementation for the OpenAI provider.
 
 use crate::{
-    core::embedding_model::{EmbeddingModel, EmbeddingModelResponse},
-    providers::openai::settings::OpenAIProviderSettings,
+    core::{
+        capabilities::ModelName,
+        embedding_model::{EmbeddingModel, EmbeddingModelResponse},
+    },
+    providers::openai::OpenAI,
 };
 
 #[derive(Debug, Clone)]
 /// Settings for OpenAI that are specific to embedding models.
-pub struct OpenAIEmbeddingModelSettings {}
+pub struct OpenAIEmbeddingModelOptions {}
 
-#[derive(Debug, Clone)]
-/// OpenAI Embedding Model
-pub struct OpenAIEmbeddingModel {
-    settings: OpenAIProviderSettings,
-    options: OpenAIEmbeddingModelSettings,
-}
-
-impl EmbeddingModel for OpenAIEmbeddingModel {
+impl<M: ModelName> EmbeddingModel for OpenAI<M> {
     fn embed(&self) -> EmbeddingModelResponse {
         todo!()
     }
