@@ -6,17 +6,24 @@ use crate::{
         client::EmbeddingClient,
         embedding_model::{EmbeddingModel, EmbeddingModelOptions, EmbeddingModelResponse},
     },
+    error::Result,
     providers::openai::OpenAI,
 };
 use async_trait::async_trait;
 
 #[derive(Debug, Clone)]
 /// Settings for OpenAI that are specific to embedding models.
+///
+/// This struct is a placeholder for future embedding-specific configuration options.
+/// Currently, embedding configuration is handled directly through `OpenAIEmbeddingOptions`
+/// in the client layer, but this struct exists to maintain API consistency with the
+/// `LanguageModel` pattern and to provide a location for embedding-specific settings
+/// if they are added in the future.
 pub struct OpenAIEmbeddingModelOptions {}
 
 #[async_trait]
 impl<M: ModelName> EmbeddingModel for OpenAI<M> {
-    async fn embed(&self, input: EmbeddingModelOptions) -> EmbeddingModelResponse {
+    async fn embed(&self, input: EmbeddingModelOptions) -> Result<EmbeddingModelResponse> {
         // Clone self to allow mutation
         let mut model = self.clone();
 
@@ -30,9 +37,9 @@ impl<M: ModelName> EmbeddingModel for OpenAI<M> {
         model.embedding_options = options;
 
         // Send the request
-        let response = model.send(&model.settings.base_url).await.unwrap();
+        let response = model.send(&model.settings.base_url).await?;
 
         // Extract embeddings from response
-        response.data.into_iter().map(|e| e.embedding).collect()
+        Ok(response.data.into_iter().map(|e| e.embedding).collect())
     }
 }

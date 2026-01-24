@@ -1,4 +1,5 @@
 use crate::core::embedding_model::{EmbeddingModel, EmbeddingModelOptions, EmbeddingModelResponse};
+use crate::error::Result;
 use derive_builder::Builder;
 
 /// OpenAI Embeddings
@@ -22,8 +23,9 @@ impl<M: EmbeddingModel> EmbeddingModelRequest<M> {
     ///
     /// # Returns
     ///
-    /// A vector of embedding vectors, where each embedding is a vector of floats.
-    pub async fn embed(&self) -> EmbeddingModelResponse {
+    /// A Result containing a vector of embedding vectors, where each embedding is a vector of floats,
+    /// or an error if the embedding request fails.
+    pub async fn embed(&self) -> Result<EmbeddingModelResponse> {
         self.model.embed(self.input.clone()).await
     }
 }

@@ -4,6 +4,7 @@
 /// Embedding request builder and related types.
 pub mod request;
 
+use crate::error::Result;
 use async_trait::async_trait;
 
 pub use request::EmbeddingModelRequest;
@@ -15,7 +16,7 @@ pub type EmbeddingModelOptions = Vec<String>;
 #[async_trait]
 pub trait EmbeddingModel: Clone + Send + Sync + std::fmt::Debug + 'static {
     /// Embeds text inputs into vectors of floats.
-    async fn embed(&self, input: EmbeddingModelOptions) -> EmbeddingModelResponse;
+    async fn embed(&self, input: EmbeddingModelOptions) -> Result<EmbeddingModelResponse>;
 }
 
 /// The response type for embedding requests.

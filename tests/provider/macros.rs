@@ -1168,7 +1168,8 @@ macro_rules! generate_embedding_tests {
                 .build()
                 .unwrap()
                 .embed()
-                .await;
+                .await
+                .expect("Embedding request failed");
 
             dbg!(&result);
 
@@ -1187,6 +1188,55 @@ macro_rules! generate_embedding_tests {
                     value.is_finite(),
                     "Embedding values should be finite floats"
                 );
+            }
+        }
+
+        #[tokio::test]
+        async fn test_embedding_with_multiple_inputs() {
+            skip_if_no_api_key!();
+
+            let inputs = vec![
+                "Hello, world!".to_string(),
+                "This is a test".to_string(),
+                "Multiple embeddings".to_string(),
+            ];
+
+            let result = EmbeddingModelRequest::builder()
+                .model($embedding_model)
+                .input(inputs.clone())
+                .build()
+                .unwrap()
+                .embed()
+                .await
+                .expect("Embedding request failed");
+
+            dbg!(&result);
+
+            // Check that we got back embeddings for all inputs
+            assert_eq!(
+                result.len(),
+                inputs.len(),
+                "Expected {} embeddings, got {}",
+                inputs.len(),
+                result.len()
+            );
+
+            // Check that each embedding is a valid vector of floats
+            for (i, embedding) in result.iter().enumerate() {
+                assert!(
+                    !embedding.is_empty(),
+                    "Embedding {} should not be empty",
+                    i
+                );
+
+                for (j, value) in embedding.iter().enumerate() {
+                    assert!(
+                        value.is_finite(),
+                        "Embedding {} value {} should be a finite float",
+                        i,
+                        j
+                    );
+                }
             }
         }
     };
