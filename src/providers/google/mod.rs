@@ -22,7 +22,7 @@ use serde::Serialize;
 pub struct Google<M: ModelName> {
     /// Configuration settings for the Google provider.
     pub settings: GoogleProviderSettings,
-    options: GoogleOptions,
+    pub(crate) lm_options: GoogleOptions,
     pub(crate) embedding_options: GoogleEmbeddingOptions,
     _phantom: std::marker::PhantomData<M>,
 }
@@ -55,11 +55,20 @@ impl Google<DynamicModel> {
     /// A configured `Google<DynamicModel>` provider instance with default settings.
     pub fn model_name(name: impl Into<String>) -> Self {
         let settings = GoogleProviderSettings::default();
-        let options = GoogleOptions::builder().model(name.into()).build().unwrap();
+        let model_name = name.into();
+        let options = GoogleOptions::builder()
+            .model(model_name.clone())
+            .build()
+            .unwrap();
+        let embedding_options = GoogleEmbeddingOptions {
+            model: model_name.clone(),
+            requests: Vec::new(),
+        };
 
         Self {
             settings,
-            options,
+            lm_options: options,
+            embedding_options,
             _phantom: std::marker::PhantomData,
         }
     }
@@ -80,7 +89,7 @@ impl<M: ModelName> Default for Google<M> {
 
         Self {
             settings,
-            options,
+            lm_options: options,
             embedding_options,
             _phantom: std::marker::PhantomData,
         }
@@ -175,7 +184,7 @@ impl<M: ModelName> GoogleBuilder<M> {
                 base_url,
                 ..self.settings
             },
-            options,
+            lm_options: options,
             embedding_options,
             _phantom: std::marker::PhantomData,
         })

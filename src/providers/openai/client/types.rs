@@ -65,6 +65,7 @@ pub(crate) struct OpenAIResponse {
     /// Usage statistics.
     pub usage: Option<ResponseUsage>,
 }
+
 impl OpenAILanguageModelOptions {
     pub(crate) fn builder() -> OpenAILanguageModelOptionsBuilder {
         OpenAILanguageModelOptionsBuilder::default()
@@ -433,7 +434,7 @@ pub(crate) struct EmbeddingResponse {
     pub usage: Option<EmbeddingUsage>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Builder, Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[allow(dead_code)]
 pub(crate) struct OpenAIEmbeddingOptions {
     // TODO: The input must not exceed the max input tokens for the model
@@ -444,4 +445,10 @@ pub(crate) struct OpenAIEmbeddingOptions {
     pub user: Option<String>,
     pub dimensions: Option<usize>,
     pub encoding_format: Option<String>,
+}
+
+impl OpenAIEmbeddingOptions {
+    pub(crate) fn builder() -> OpenAIEmbeddingOptionsBuilder {
+        OpenAIEmbeddingOptionsBuilder::default()
+    }
 }

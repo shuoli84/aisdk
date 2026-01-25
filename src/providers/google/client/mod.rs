@@ -27,11 +27,17 @@ impl GoogleOptions {
     }
 }
 
-#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+#[derive(Builder, Debug, Default, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct GoogleEmbeddingOptions {
     pub(crate) model: String,
     pub(crate) requests: Vec<types::EmbedContentRequest>,
+}
+
+impl GoogleEmbeddingOptions {
+    pub(crate) fn builder() -> GoogleEmbeddingOptionsBuilder {
+        GoogleEmbeddingOptionsBuilder::default()
+    }
 }
 
 impl<M: ModelName> LanguageModelClient for Google<M> {
@@ -39,13 +45,13 @@ impl<M: ModelName> LanguageModelClient for Google<M> {
     type StreamEvent = types::GoogleStreamEvent;
 
     fn path(&self) -> String {
-        if self.options.streaming {
+        if self.lm_options.streaming {
             return format!(
                 "/v1beta/models/{}:streamGenerateContent",
-                self.options.model
+                self.lm_options.model
             );
         };
-        format!("/v1beta/models/{}:generateContent", self.options.model)
+        format!("/v1beta/models/{}:generateContent", self.lm_options.model)
     }
 
     fn method(&self) -> reqwest::Method {
@@ -60,14 +66,14 @@ impl<M: ModelName> LanguageModelClient for Google<M> {
     }
 
     fn query_params(&self) -> Vec<(&str, &str)> {
-        if self.options.streaming {
+        if self.lm_options.streaming {
             return vec![("alt", "sse")];
         }
         Vec::new()
     }
 
     fn body(&self) -> reqwest::Body {
-        if let Some(request) = &self.options.request {
+        if let Some(request) = &self.lm_options.request {
             let body = serde_json::to_string(request).unwrap();
             return reqwest::Body::from(body);
         };

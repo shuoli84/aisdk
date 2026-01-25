@@ -81,11 +81,23 @@ impl OpenAI<DynamicModel> {
     /// A configured `OpenAI<DynamicModel>` provider instance with default settings.
     pub fn model_name(name: impl Into<String>) -> Self {
         let settings = OpenAIProviderSettings::default();
-        let options = OpenAIOptions::builder().model(name.into()).build().unwrap();
+        let model_name = name.into();
+        let lm_options = OpenAILanguageModelOptions::builder()
+            .model(model_name.clone())
+            .build()
+            .unwrap();
+        let embedding_options = OpenAIEmbeddingOptions {
+            input: vec![],
+            model: model_name,
+            user: None,
+            dimensions: None,
+            encoding_format: None,
+        };
 
         OpenAI {
             settings,
-            options,
+            lm_options,
+            embedding_options,
             _phantom: std::marker::PhantomData,
         }
     }
@@ -94,7 +106,7 @@ impl OpenAI<DynamicModel> {
 /// OpenAI Provider Builder
 pub struct OpenAIBuilder<M: ModelName> {
     settings: OpenAIProviderSettings,
-    options: OpenAIOptions,
+    options: OpenAILanguageModelOptions,
     _phantom: std::marker::PhantomData<M>,
 }
 
@@ -126,7 +138,7 @@ impl<M: ModelName> Default for OpenAIBuilder<M> {
         let settings = OpenAIProviderSettings::default();
 
         // Initialize options with the static model name
-        let options = OpenAIOptions::builder()
+        let options = OpenAILanguageModelOptions::builder()
             .model(M::MODEL_NAME.to_string())
             .build()
             .unwrap();
