@@ -1066,6 +1066,7 @@ macro_rules! generate_language_model_step_id_tests {
 
             let result = LanguageModelRequest::builder()
                 .model($default_model)
+                .system("Do the exact instructions you are told")
                 .prompt("Respond with exactly 'test' in lowercase.")
                 .build()
                 .generate_text()
@@ -1116,6 +1117,7 @@ macro_rules! generate_language_model_step_id_tests {
 
             let response = LanguageModelRequest::builder()
                 .model($default_model)
+                .system("Do the exact instructions you are told")
                 .prompt("Respond with 'stream test'")
                 .build()
                 .stream_text()
