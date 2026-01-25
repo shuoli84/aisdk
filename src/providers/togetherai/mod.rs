@@ -1,4 +1,4 @@
-//! This module provides the Groq provider, wrapping OpenAI Chat Completions for Groq requests.
+//! This module provides the Together AI provider, wrapping OpenAI Chat Completions for Together AI requests.
 
 pub mod capabilities;
 pub mod language_model;
@@ -9,68 +9,68 @@ use crate::core::DynamicModel;
 use crate::core::capabilities::ModelName;
 use crate::core::utils::validate_base_url;
 use crate::error::Result;
-use crate::providers::groq::settings::GroqProviderSettings;
 use crate::providers::openai_chat_completions::OpenAIChatCompletions;
+use crate::providers::togetherai::settings::TogetherAIProviderSettings;
 
-/// The Groq provider, wrapping OpenAI Chat Completions API.
+/// The Together AI provider, wrapping OpenAI Chat Completions API.
 #[derive(Debug, Clone)]
-pub struct Groq<M: ModelName> {
-    /// Configuration settings for the Groq provider.
-    pub settings: GroqProviderSettings,
+pub struct TogetherAI<M: ModelName> {
+    /// Configuration settings for the Together AI provider.
+    pub settings: TogetherAIProviderSettings,
     pub(crate) inner: OpenAIChatCompletions<M>,
 }
 
-impl<M: ModelName> Groq<M> {
-    /// Groq provider setting builder.
-    pub fn builder() -> GroqBuilder<M> {
-        GroqBuilder::default()
+impl<M: ModelName> TogetherAI<M> {
+    /// Together AI provider setting builder.
+    pub fn builder() -> TogetherAIBuilder<M> {
+        TogetherAIBuilder::default()
     }
 }
 
-impl Groq<DynamicModel> {
-    /// Creates a Groq provider with a dynamic model name using default settings.
+impl TogetherAI<DynamicModel> {
+    /// Creates a Together AI provider with a dynamic model name using default settings.
     ///
     /// This allows you to specify the model name as a string rather than
-    /// using methods like `Groq::llama_3_3_70b_spec_dec()`, etc.
+    /// using methods like `TogetherAI::llama_3_3_70b_spec_dec()`, etc.
     ///
     /// **WARNING**: when using `DynamicModel`, model capabilities are not validated.
     /// This means there is no compile-time guarantee that the model supports requested features.
     ///
     /// For custom configuration (API key, base URL, etc.), use the builder pattern:
-    /// `Groq::<DynamicModel>::builder().model_name(...).api_key(...).build()`
+    /// `TogetherAI::<DynamicModel>::builder().model_name(...).api_key(...).build()`
     ///
     /// # Parameters
     ///
-    /// * `model_name` - The Groq model identifier (e.g., "llama-3.3-70b-specdec", "mixtral-8x7b-32768")
+    /// * `model_name` - The Together AI model identifier (e.g., "Llama-3.3-70B-Instruct-Turbo")
     ///
     /// # Returns
     ///
-    /// A configured `Groq<DynamicModel>` provider instance with default settings.
+    /// A configured `TogetherAI<DynamicModel>` provider instance with default settings.
     pub fn model_name(name: impl Into<String>) -> Self {
-        let settings = GroqProviderSettings::default();
+        let settings = TogetherAIProviderSettings::default();
         let inner = OpenAIChatCompletions::<DynamicModel>::model_name(name);
 
-        Groq { settings, inner }
+        TogetherAI { settings, inner }
     }
 }
 
-impl<M: ModelName> Default for Groq<M> {
-    /// Creates a new Groq provider with default settings.
-    fn default() -> Groq<M> {
-        GroqBuilder::default().build().unwrap()
+impl<M: ModelName> Default for TogetherAI<M> {
+    /// Creates a new Together AI provider with default settings.
+    fn default() -> TogetherAI<M> {
+        TogetherAIBuilder::default().build().unwrap()
     }
 }
 
-/// Groq provider builder
-pub struct GroqBuilder<M: ModelName> {
-    settings: GroqProviderSettings,
+/// Together AI provider builder
+pub struct TogetherAIBuilder<M: ModelName> {
+    settings: TogetherAIProviderSettings,
     inner: OpenAIChatCompletions<M>,
 }
 
-impl<M: ModelName> Default for GroqBuilder<M> {
-    /// Creates a new Groq provider with default settings.
+impl<M: ModelName> Default for TogetherAIBuilder<M> {
+    /// Creates a new Together AI provider with default settings.
     fn default() -> Self {
-        let settings = GroqProviderSettings::default();
+        let settings = TogetherAIProviderSettings::default();
         let mut inner = OpenAIChatCompletions::default();
         inner.settings.provider_name = settings.provider_name.clone();
         inner.settings.base_url = settings.base_url.clone();
@@ -80,8 +80,8 @@ impl<M: ModelName> Default for GroqBuilder<M> {
     }
 }
 
-impl<M: ModelName> GroqBuilder<M> {
-    /// Sets the provider name for the Groq provider.
+impl<M: ModelName> TogetherAIBuilder<M> {
+    /// Sets the provider name for the Together AI provider.
     ///
     /// # Parameters
     ///
@@ -97,7 +97,7 @@ impl<M: ModelName> GroqBuilder<M> {
         self
     }
 
-    /// Sets the base URL for the Groq provider.
+    /// Sets the base URL for the Together AI provider.
     ///
     /// # Parameters
     ///
@@ -113,7 +113,7 @@ impl<M: ModelName> GroqBuilder<M> {
         self
     }
 
-    /// Sets the API key for the Groq provider.
+    /// Sets the API key for the Together AI provider.
     ///
     /// # Parameters
     ///
@@ -129,14 +129,14 @@ impl<M: ModelName> GroqBuilder<M> {
         self
     }
 
-    /// Builds the Groq provider.
+    /// Builds the Together AI provider.
     ///
     /// Validates the configuration and creates the provider instance.
     ///
     /// # Returns
     ///
-    /// A `Result` containing the configured `Groq<M>` or an `Error`.
-    pub fn build(mut self) -> Result<Groq<M>> {
+    /// A `Result` containing the configured `TogetherAI<M>` or an `Error`.
+    pub fn build(mut self) -> Result<TogetherAI<M>> {
         // validate base url
         let base_url = validate_base_url(&self.settings.base_url)?;
 
@@ -149,24 +149,24 @@ impl<M: ModelName> GroqBuilder<M> {
         self.inner.settings.base_url = base_url.to_string();
         self.settings.base_url = base_url.to_string();
 
-        Ok(Groq {
+        Ok(TogetherAI {
             settings: self.settings,
             inner: self.inner,
         })
     }
 }
 
-impl GroqBuilder<DynamicModel> {
-    /// Sets the model name from a string. e.g., "llama-3.3-70b-specdec", "mixtral-8x7b-32768"
+impl TogetherAIBuilder<DynamicModel> {
+    /// Sets the model name from a string. e.g., "Llama-3.3-70B-Instruct-Turbo"
     ///
     /// **WARNING**: when using `DynamicModel`, model capabilities are not validated.
     /// This means there is no compile-time guarantee that the model supports requested features.
     ///
-    /// For compile-time model validation, use the constructor methods like `Groq::llama_3_3_70b_spec_dec()`.
+    /// For compile-time model validation, use the constructor methods like `TogetherAI::llama_3_3_70b_spec_dec()`.
     ///
     /// # Parameters
     ///
-    /// * `model_name` - The Groq model identifier (e.g., "llama-3.3-70b-specdec", "mixtral-8x7b-32768")
+    /// * `model_name` - The Together AI model identifier (e.g., "Llama-3.3-70B-Instruct-Turbo")
     ///
     /// # Returns
     ///

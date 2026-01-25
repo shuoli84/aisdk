@@ -30,7 +30,7 @@ cargo add aisdk --features openai
 
 ```rust
 use aisdk::core::LanguageModelRequest;
-use aisdk::providers::openai::OpenAI;
+use aisdk::providers::OpenAI;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -77,7 +77,7 @@ Register tools with an agent so the model can call them during its reasoning loo
 
 ```rust
 use aisdk::core::{LanguageModelRequest, utils::step_count_is};
-use aisdk::providers::openai::OpenAI;
+use aisdk::providers::OpenAI;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -117,7 +117,7 @@ Use the `schema` attribute to infer the structure of the output.
 
 ```rust
 use aisdk::core::LanguageModelRequest;
-use aisdk::providers::openai::OpenAI;
+use aisdk::providers::OpenAI;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -155,6 +155,17 @@ The AISDK prompt feature provides a powerful, file-based template system for man
 - [ ] Image Model Request Support
 - [ ] Voice Model Request Support
 - [ ] Additional Providers
+    - [x] Anthropic
+    - [x] Amazon Bedrock
+    - [x] DeepSeek
+    - [x] Google
+    - [x] Groq
+    - [x] OpenAI
+    - [x] OpenRouter
+    - [x] TogetherAI
+    - [x] Vercel
+    - [x] xAI (Grok)
+    - [ ] more to come...
 
 ## Contributing
 

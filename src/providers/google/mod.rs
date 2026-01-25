@@ -9,6 +9,7 @@ pub mod extensions;
 pub mod language_model;
 pub mod settings;
 
+use crate::core::DynamicModel;
 use crate::core::capabilities::ModelName;
 use crate::core::utils::validate_base_url;
 use crate::error::Error;
@@ -30,6 +31,37 @@ impl<M: ModelName> Google<M> {
     /// Google provider setting builder.
     pub fn builder() -> GoogleBuilder<M> {
         GoogleBuilder::default()
+    }
+}
+
+impl Google<DynamicModel> {
+    /// Creates a Google provider with a dynamic model name using default settings.
+    ///
+    /// This allows you to specify the model name as a string rather than
+    /// using methods like `Google::gemini_1_5_pro()`, etc.
+    ///
+    /// **WARNING**: when using `DynamicModel`, model capabilities are not validated.
+    /// This means there is no compile-time guarantee that the model supports requested features.
+    ///
+    /// For custom configuration (API key, base URL, etc.), use the builder pattern:
+    /// `Google::<DynamicModel>::builder().model_name(...).api_key(...).build()`
+    ///
+    /// # Parameters
+    ///
+    /// * `model_name` - The Google model identifier (e.g., "gemini-1.5-pro", "gemini-1.5-flash")
+    ///
+    /// # Returns
+    ///
+    /// A configured `Google<DynamicModel>` provider instance with default settings.
+    pub fn model_name(name: impl Into<String>) -> Self {
+        let settings = GoogleProviderSettings::default();
+        let options = GoogleOptions::builder().model(name.into()).build().unwrap();
+
+        Self {
+            settings,
+            options,
+            _phantom: std::marker::PhantomData,
+        }
     }
 }
 
@@ -58,6 +90,7 @@ impl<M: ModelName> Default for Google<M> {
 /// Google Provider Builder
 pub struct GoogleBuilder<M: ModelName> {
     settings: GoogleProviderSettings,
+    options: GoogleOptions,
     _phantom: std::marker::PhantomData<M>,
 }
 
@@ -65,11 +98,37 @@ impl<M: ModelName> Default for GoogleBuilder<M> {
     /// Creates a new Google provider with default settings.
     fn default() -> Self {
         let settings = GoogleProviderSettings::default();
+        let options = GoogleOptions::builder()
+            .model(M::MODEL_NAME.to_string())
+            .build()
+            .unwrap();
 
         Self {
             settings,
+            options,
             _phantom: std::marker::PhantomData,
         }
+    }
+}
+
+impl GoogleBuilder<DynamicModel> {
+    /// Sets the model name from a string. e.g., "gemini-1.5-pro", "gemini-1.5-flash"
+    ///
+    /// **WARNING**: when using `DynamicModel`, model capabilities are not validated.
+    /// This means there is no compile-time guarantee that the model supports requested features.
+    ///
+    /// For compile-time model validation, use the constructor methods like `Google::gemini_1_5_pro()`.
+    ///
+    /// # Parameters
+    ///
+    /// * `model_name` - The Google model identifier (e.g., "gemini-1.5-pro", "gemini-1.5-flash")
+    ///
+    /// # Returns
+    ///
+    /// The builder with the model name set.
+    pub fn model_name(mut self, model_name: impl Into<String>) -> Self {
+        self.options.model = model_name.into();
+        self
     }
 }
 

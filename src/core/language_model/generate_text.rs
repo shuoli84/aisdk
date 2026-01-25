@@ -43,7 +43,7 @@ impl<M: LanguageModel> LanguageModelRequest<M> {
     ///# {
     ///    use aisdk::{
     ///        core::{LanguageModelRequest},
-    ///        providers::openai::OpenAI,
+    ///        providers::OpenAI,
     ///    };
     ///
     ///    async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -67,7 +67,7 @@ impl<M: LanguageModel> LanguageModelRequest<M> {
         let (system_prompt, messages) = resolve_message(&self.options, &self.prompt);
 
         let mut options = LanguageModelOptions {
-            system: Some(system_prompt),
+            system: (!system_prompt.is_empty()).then_some(system_prompt),
             messages,
             schema: self.options.schema.to_owned(),
             stop_sequences: self.options.stop_sequences.to_owned(),
