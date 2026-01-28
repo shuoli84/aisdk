@@ -160,3 +160,23 @@ pub(crate) trait Client {
         Ok(Box::pin(stream))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_join_url() {
+        let url = join_url("https://api.example.com/v1", "chat/completions").unwrap();
+        assert_eq!(url.as_str(), "https://api.example.com/v1/chat/completions");
+
+        let url = join_url("https://api.example.com/v1/", "chat/completions").unwrap();
+        assert_eq!(url.as_str(), "https://api.example.com/v1/chat/completions");
+
+        let url = join_url("https://api.example.com/v1", "/chat/completions").unwrap();
+        assert_eq!(url.as_str(), "https://api.example.com/v1/chat/completions");
+
+        let url = join_url("https://api.example.com/v1/", "/chat/completions").unwrap();
+        assert_eq!(url.as_str(), "https://api.example.com/v1/chat/completions");
+    }
+}
