@@ -57,7 +57,7 @@ impl<M: ModelName> Default for OpenAICompatible<M> {
     /// Creates a new OpenAICompatible provider with default settings.
     ///
     /// Defaults:
-    /// - base_url: "https://api.openai.com/v1"
+    /// - base_url: `<https://api.openai.com/v1>`
     /// - path: "chat/completions"
     fn default() -> Self {
         let settings = OpenAIChatCompletionsSettings {
@@ -169,7 +169,7 @@ impl<M: ModelName> OpenAICompatibleBuilder<M> {
     ///
     /// # Parameters
     ///
-    /// * `base_url` - The base URL string for API requests (e.g., "https://api.z.ai/api/coding/paas/v4")
+    /// * `base_url` - The base URL string for API requests (e.g., `<https://api.z.ai/api/coding/paas/v4>`)
     pub fn base_url(mut self, base_url: impl Into<String>) -> Self {
         self.settings.base_url = base_url.into();
         self
