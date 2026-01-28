@@ -14,9 +14,6 @@ pub struct OpenAIProviderSettings {
 
     /// The API key for the OpenAI API.
     pub api_key: String,
-
-    /// The API path (e.g., "/v1/responses", "chat/completions") Defaults to "/v1/responses".
-    pub path: String,
 }
 
 impl Default for OpenAIProviderSettings {
@@ -26,7 +23,6 @@ impl Default for OpenAIProviderSettings {
             provider_name: "openai".to_string(),
             base_url: "https://api.openai.com".to_string(),
             api_key: std::env::var("OPENAI_API_KEY").unwrap_or_default(),
-            path: "/v1/responses".to_string(),
         }
     }
 }

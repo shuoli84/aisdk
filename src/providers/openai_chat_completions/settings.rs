@@ -17,9 +17,6 @@ pub struct OpenAIChatCompletionsSettings {
 
     /// The API key for authentication
     pub api_key: String,
-
-    /// The API path (e.g., "chat/completions")
-    pub path: String,
 }
 
 impl Default for OpenAIChatCompletionsSettings {
@@ -28,7 +25,6 @@ impl Default for OpenAIChatCompletionsSettings {
             provider_name: "openai-chat".to_string(),
             base_url: "https://api.openai.com/v1".to_string(),
             api_key: std::env::var("OPENAI_API_KEY").unwrap_or_default(),
-            path: "chat/completions".to_string(),
         }
     }
 }

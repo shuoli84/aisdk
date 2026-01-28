@@ -58,11 +58,9 @@ impl<M: ModelName> Default for OpenAICompatible<M> {
     ///
     /// Defaults:
     /// - base_url: `<https://api.openai.com/v1>`
-    /// - path: "chat/completions"
     fn default() -> Self {
         let settings = OpenAIChatCompletionsSettings {
             base_url: "https://api.openai.com/v1".to_string(),
-            path: "chat/completions".to_string(),
             ..Default::default()
         };
         let options = ChatCompletionsOptions {
@@ -103,7 +101,6 @@ impl OpenAICompatible<DynamicModel> {
     pub fn model_name(name: impl Into<String>) -> Self {
         let settings = OpenAIChatCompletionsSettings {
             base_url: "https://api.openai.com/v1".to_string(),
-            path: "chat/completions".to_string(),
             ..Default::default()
         };
         let options = ChatCompletionsOptions {
@@ -133,7 +130,6 @@ impl<M: ModelName> Default for OpenAICompatibleBuilder<M> {
     fn default() -> Self {
         let settings = OpenAIChatCompletionsSettings {
             base_url: "https://api.openai.com/v1".to_string(),
-            path: "chat/completions".to_string(),
             ..Default::default()
         };
         let options = ChatCompletionsOptions {
@@ -192,19 +188,6 @@ impl<M: ModelName> OpenAICompatibleBuilder<M> {
     /// * `provider_name` - The provider name string.
     pub fn provider_name(mut self, provider_name: impl Into<String>) -> Self {
         self.settings.provider_name = provider_name.into();
-        self
-    }
-
-    /// Sets the API path for the provider.
-    ///
-    /// Defaults to "chat/completions" for OpenAI-compatible endpoints.
-    /// You typically don't need to change this unless the API uses a different path.
-    ///
-    /// # Parameters
-    ///
-    /// * `path` - The API path string (e.g., "chat/completions", "v2/chat/completions").
-    pub fn path(mut self, path: impl Into<String>) -> Self {
-        self.settings.path = path.into();
         self
     }
 

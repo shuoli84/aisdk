@@ -17,7 +17,7 @@ impl<M: ModelName> Client for OpenAIChatCompletions<M> {
     type StreamEvent = ChatCompletionsStreamEvent;
 
     fn path(&self) -> String {
-        self.settings.path.clone()
+        "chat/completions".to_string()
     }
 
     fn method(&self) -> reqwest::Method {

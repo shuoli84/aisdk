@@ -55,7 +55,7 @@ impl<M: ModelName> Client for OpenAI<M> {
     type StreamEvent = types::OpenAiStreamEvent;
 
     fn path(&self) -> String {
-        self.settings.path.clone()
+        "/v1/responses".to_string()
     }
 
     fn method(&self) -> reqwest::Method {
