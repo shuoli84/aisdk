@@ -25,4 +25,4 @@ crate::openai_compatible_provider!(
 crate::openai_compatible_language_model!(OpenRouter, "OpenRouter");
 
 // Generate the embedding model implementation
-crate::openai_compatible_embedding_model!(OpenRouter, OpenRouterProviderSettings, "OpenRouter");
+crate::openai_compatible_embedding_model!(OpenRouter, "OpenRouter");

@@ -7,6 +7,7 @@
 
 pub(crate) mod client;
 pub(crate) mod conversions;
+pub(crate) mod embedding_model;
 pub(crate) mod language_model;
 #[macro_use]
 pub mod macros;

@@ -25,4 +25,4 @@ crate::openai_compatible_provider!(
 crate::openai_compatible_language_model!(Vercel, "Vercel");
 
 // Generate the embedding model implementation
-crate::openai_compatible_embedding_model!(Vercel, VercelProviderSettings, "Vercel");
+crate::openai_compatible_embedding_model!(Vercel, "Vercel");

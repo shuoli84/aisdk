@@ -25,4 +25,4 @@ crate::openai_compatible_provider!(
 crate::openai_compatible_language_model!(TogetherAI, "Together AI");
 
 // Generate the embedding model implementation
-crate::openai_compatible_embedding_model!(TogetherAI, TogetherAIProviderSettings, "Together AI");
+crate::openai_compatible_embedding_model!(TogetherAI, "Together AI");
