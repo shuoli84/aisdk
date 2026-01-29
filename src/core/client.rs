@@ -1,6 +1,7 @@
 //! This module provides the client for interacting with the AI providers.
 //! It is a thin wrapper around the `reqwest` crate.
 
+use crate::core::utils::join_url;
 use crate::error::{Error, Result};
 use futures::Stream;
 use futures::StreamExt;
@@ -24,13 +25,7 @@ pub(crate) trait LanguageModelClient {
     async fn send(&self, base_url: impl IntoUrl) -> Result<Self::Response> {
         let client = reqwest::Client::new();
 
-        let base_url = base_url
-            .into_url()
-            .map_err(|_| Error::InvalidInput("Invalid base URL".into()))?;
-
-        let url = base_url
-            .join(&self.path())
-            .map_err(|_| Error::InvalidInput("Failed to join base URL and path".into()))?;
+        let url = join_url(base_url, &self.path())?;
 
         let max_retries = 5;
         let mut retry_count = 0;
@@ -95,13 +90,7 @@ pub(crate) trait LanguageModelClient {
     {
         let client = reqwest::Client::new();
 
-        let base_url = base_url
-            .into_url()
-            .map_err(|_| Error::InvalidInput("Invalid base URL".into()))?;
-
-        let url = base_url
-            .join(&self.path())
-            .map_err(|_| Error::InvalidInput("Failed to join base URL and path".into()))?;
+        let url = join_url(base_url, &self.path())?;
 
         // Establish the event source stream directly
         // Note: Status code errors (including 429) will be surfaced as stream events
