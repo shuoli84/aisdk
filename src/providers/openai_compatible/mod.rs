@@ -18,64 +18,49 @@
 //!     .unwrap();
 //! ```
 
+pub mod capabilities;
+pub mod embedding_model;
+pub mod language_model;
+pub mod settings;
+
+use crate::Error;
 use crate::core::DynamicModel;
 use crate::core::capabilities::ModelName;
-use crate::core::language_model::{
-    LanguageModel, LanguageModelOptions, LanguageModelResponse, ProviderStream,
-};
 use crate::core::utils::validate_base_url;
-use crate::error::{Error, Result};
-use crate::providers::openai_chat_completions::{
-    OpenAIChatCompletions, client::ChatCompletionsOptions, settings::OpenAIChatCompletionsSettings,
-};
-use async_trait::async_trait;
+use crate::error::Result;
+use crate::providers::openai_chat_completions::OpenAIChatCompletions;
+use crate::providers::openai_compatible::settings::OpenAICompatibleSettings;
 
 /// OpenAI-compatible API provider.
 ///
 /// This provider can be used for any OpenAI-compatible endpoint that uses the
 /// chat completions API format. It provides a simple, public interface for
 /// connecting to custom or less common OpenAI-compatible services.
+///
+/// # Example
+///
+/// ```rust,no_run
+/// use aisdk::providers::OpenAICompatible;
+/// use aisdk::core::DynamicModel;
+///
+/// let provider = OpenAICompatible::<DynamicModel>::builder()
+///     .base_url("https://api.z.ai/api/coding/paas/v4")
+///     .api_key("your-api-key")
+///     .model_name("glm-4.5")
+///     .build()
+///     .unwrap();
+/// ```
 #[derive(Debug, Clone)]
 pub struct OpenAICompatible<M: ModelName> {
-    /// The inner OpenAI Chat Completions provider
-    #[allow(dead_code)]
-    inner: OpenAIChatCompletions<M>,
+    /// Configuration settings for the OpenAICompatible provider.
+    pub settings: OpenAICompatibleSettings,
+    pub(crate) inner: OpenAIChatCompletions<M>,
 }
 
 impl<M: ModelName> OpenAICompatible<M> {
-    /// Creates a new builder for the OpenAICompatible provider.
-    ///
-    /// # Returns
-    ///
-    /// An `OpenAICompatibleBuilder` for configuring the provider.
+    /// OpenAICompatible provider setting builder.
     pub fn builder() -> OpenAICompatibleBuilder<M> {
         OpenAICompatibleBuilder::default()
-    }
-}
-
-impl<M: ModelName> Default for OpenAICompatible<M> {
-    /// Creates a new OpenAICompatible provider with default settings.
-    ///
-    /// Defaults:
-    /// - base_url: `<https://api.openai.com/v1>`
-    fn default() -> Self {
-        let settings = OpenAIChatCompletionsSettings {
-            base_url: "https://api.openai.com/v1".to_string(),
-            ..Default::default()
-        };
-        let options = ChatCompletionsOptions {
-            model: M::MODEL_NAME.to_string(),
-            messages: vec![],
-            ..Default::default()
-        };
-
-        Self {
-            inner: OpenAIChatCompletions {
-                settings,
-                options,
-                _phantom: std::marker::PhantomData,
-            },
-        }
     }
 }
 
@@ -99,50 +84,112 @@ impl OpenAICompatible<DynamicModel> {
     ///
     /// A configured `OpenAICompatible<DynamicModel>` provider instance with default settings.
     pub fn model_name(name: impl Into<String>) -> Self {
-        let settings = OpenAIChatCompletionsSettings {
-            base_url: "https://api.openai.com/v1".to_string(),
-            ..Default::default()
-        };
-        let options = ChatCompletionsOptions {
-            model: name.into(),
-            messages: vec![],
-            ..Default::default()
-        };
+        let settings = OpenAICompatibleSettings::default();
+        let inner = OpenAIChatCompletions::<DynamicModel>::model_name(name);
 
-        Self {
-            inner: OpenAIChatCompletions {
-                settings,
-                options,
-                _phantom: std::marker::PhantomData,
-            },
-        }
+        OpenAICompatible { settings, inner }
     }
 }
 
-/// Builder for the OpenAICompatible provider.
+impl<M: ModelName> Default for OpenAICompatible<M> {
+    /// Creates a new OpenAICompatible provider with default settings.
+    fn default() -> OpenAICompatible<M> {
+        OpenAICompatibleBuilder::default().build().unwrap()
+    }
+}
+
+/// OpenAICompatible provider builder
 pub struct OpenAICompatibleBuilder<M: ModelName> {
-    settings: OpenAIChatCompletionsSettings,
-    options: ChatCompletionsOptions,
-    _phantom: std::marker::PhantomData<M>,
+    settings: OpenAICompatibleSettings,
+    inner: OpenAIChatCompletions<M>,
 }
 
 impl<M: ModelName> Default for OpenAICompatibleBuilder<M> {
+    /// Creates a new OpenAICompatible provider with default settings.
     fn default() -> Self {
-        let settings = OpenAIChatCompletionsSettings {
-            base_url: "https://api.openai.com/v1".to_string(),
-            ..Default::default()
-        };
-        let options = ChatCompletionsOptions {
-            model: M::MODEL_NAME.to_string(),
-            messages: vec![],
-            ..Default::default()
-        };
+        let settings = OpenAICompatibleSettings::default();
+        let mut inner = OpenAIChatCompletions::default();
+        inner.settings.provider_name = settings.provider_name.clone();
+        inner.settings.base_url = settings.base_url.clone();
+        inner.settings.api_key = settings.api_key.clone();
 
-        Self {
-            settings,
-            options,
-            _phantom: std::marker::PhantomData,
+        Self { settings, inner }
+    }
+}
+
+impl<M: ModelName> OpenAICompatibleBuilder<M> {
+    /// Sets the provider name for the OpenAICompatible provider.
+    ///
+    /// # Parameters
+    ///
+    /// * `provider_name` - The provider name string.
+    ///
+    /// # Returns
+    ///
+    /// The builder with the provider name set.
+    pub fn provider_name(mut self, provider_name: impl Into<String>) -> Self {
+        let name = provider_name.into();
+        self.settings.provider_name = name.clone();
+        self.inner.settings.provider_name = name;
+        self
+    }
+
+    /// Sets the base URL for the OpenAICompatible provider.
+    ///
+    /// # Parameters
+    ///
+    /// * `base_url` - The base URL string for API requests.
+    ///
+    /// # Returns
+    ///
+    /// The builder with the base URL set.
+    pub fn base_url(mut self, base_url: impl Into<String>) -> Self {
+        let url = base_url.into();
+        self.settings.base_url = url.clone();
+        self.inner.settings.base_url = url;
+        self
+    }
+
+    /// Sets the API key for the OpenAICompatible provider.
+    ///
+    /// # Parameters
+    ///
+    /// * `api_key` - The API key string for authentication.
+    ///
+    /// # Returns
+    ///
+    /// The builder with the API key set.
+    pub fn api_key(mut self, api_key: impl Into<String>) -> Self {
+        let key = api_key.into();
+        self.settings.api_key = key.clone();
+        self.inner.settings.api_key = key;
+        self
+    }
+
+    /// Builds the OpenAICompatible provider.
+    ///
+    /// Validates the configuration and creates the provider instance.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing the configured `OpenAICompatible<M>` or an `Error`.
+    pub fn build(mut self) -> Result<OpenAICompatible<M>> {
+        // validate base url
+        let base_url = validate_base_url(&self.settings.base_url)?;
+
+        // check api key exists
+        if self.settings.api_key.is_empty() {
+            return Err(Error::MissingField("api_key".to_string()));
         }
+
+        // Update the inner provider with the validated base_url
+        self.inner.settings.base_url = base_url.to_string();
+        self.settings.base_url = base_url.to_string();
+
+        Ok(OpenAICompatible {
+            settings: self.settings,
+            inner: self.inner,
+        })
     }
 }
 
@@ -154,88 +201,12 @@ impl OpenAICompatibleBuilder<DynamicModel> {
     /// # Parameters
     ///
     /// * `model_name` - The model identifier (e.g., "gpt-4o", "glm-4.5")
-    pub fn model_name(mut self, model_name: impl Into<String>) -> Self {
-        self.options.model = model_name.into();
-        self
-    }
-}
-
-impl<M: ModelName> OpenAICompatibleBuilder<M> {
-    /// Sets the base URL for the API.
-    ///
-    /// # Parameters
-    ///
-    /// * `base_url` - The base URL string for API requests (e.g., `<https://api.z.ai/api/coding/paas/v4>`)
-    pub fn base_url(mut self, base_url: impl Into<String>) -> Self {
-        self.settings.base_url = base_url.into();
-        self
-    }
-
-    /// Sets the API key for authentication.
-    ///
-    /// # Parameters
-    ///
-    /// * `api_key` - The API key string for authentication.
-    pub fn api_key(mut self, api_key: impl Into<String>) -> Self {
-        self.settings.api_key = api_key.into();
-        self
-    }
-
-    /// Sets the name of the provider.
-    ///
-    /// # Parameters
-    ///
-    /// * `provider_name` - The provider name string.
-    pub fn provider_name(mut self, provider_name: impl Into<String>) -> Self {
-        self.settings.provider_name = provider_name.into();
-        self
-    }
-
-    /// Builds the OpenAICompatible provider.
-    ///
-    /// Validates the configuration and creates the provider instance.
     ///
     /// # Returns
     ///
-    /// A `Result` containing the configured `OpenAICompatible` provider or an `Error`.
-    pub fn build(self) -> std::result::Result<OpenAICompatible<M>, Error> {
-        // Validate base url
-        let base_url = validate_base_url(&self.settings.base_url)?;
-
-        // Check api key exists
-        if self.settings.api_key.is_empty() {
-            return Err(Error::MissingField("api_key".to_string()));
-        }
-
-        let settings = OpenAIChatCompletionsSettings {
-            base_url,
-            ..self.settings
-        };
-
-        let inner = OpenAIChatCompletions {
-            settings,
-            options: self.options,
-            _phantom: std::marker::PhantomData,
-        };
-
-        Ok(OpenAICompatible { inner })
-    }
-}
-
-#[async_trait]
-impl<M: ModelName> LanguageModel for OpenAICompatible<M> {
-    fn name(&self) -> String {
-        self.inner.name()
-    }
-
-    async fn generate_text(
-        &mut self,
-        options: LanguageModelOptions,
-    ) -> Result<LanguageModelResponse> {
-        self.inner.generate_text(options).await
-    }
-
-    async fn stream_text(&mut self, options: LanguageModelOptions) -> Result<ProviderStream> {
-        self.inner.stream_text(options).await
+    /// The builder with the model name set.
+    pub fn model_name(mut self, model_name: impl Into<String>) -> Self {
+        self.inner.options.model = model_name.into();
+        self
     }
 }
