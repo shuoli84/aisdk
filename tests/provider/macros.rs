@@ -163,7 +163,7 @@ macro_rules! generate_basic_tests {
                 .generate_text()
                 .await;
 
-            assert!(result.is_ok());
+            assert!(dbg!(&result).is_ok());
 
             let text = result
                 .as_ref()
@@ -248,7 +248,7 @@ macro_rules! generate_basic_tests {
                 .generate_text()
                 .await;
 
-            assert!(result.is_ok());
+            assert!(dbg!(&result).is_ok());
 
             let text = result
                 .as_ref()
