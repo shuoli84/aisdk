@@ -1,6 +1,6 @@
 //! This module provides the Vercel provider, wrapping OpenAI Chat Completions for Vercel requests.
 //!
-//! NOTE: xAI might not be fully compatible with the OpenAI API. Please refer to the xAI documentation for more information.
+//! NOTE: Vercel might not be fully compatible with the OpenAI API. Please refer to the Vercel documentation for more information.
 
 pub mod capabilities;
 

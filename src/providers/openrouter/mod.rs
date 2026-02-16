@@ -1,6 +1,6 @@
 //! This module provides the Openrouter provider, wrapping OpenAI Chat Completions for Openrouter requests.
 //!
-//! NOTE: xAI might not be fully compatible with the OpenAI API. Please refer to the xAI documentation for more information.
+//! NOTE: OpenRouter might not be fully compatible with the OpenAI API. Please refer to the OpenRouter documentation for more information.
 
 pub mod capabilities;
 
