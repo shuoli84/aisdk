@@ -149,7 +149,10 @@ impl From<AnthropicUsage> for Usage {
         Self {
             input_tokens: Some(usage.input_tokens),
             output_tokens: Some(usage.output_tokens),
-            cached_tokens: Some(usage.cache_creation_input_tokens + usage.cache_read_input_tokens),
+            cached_tokens: Some(
+                usage.cache_creation_input_tokens.unwrap_or(0)
+                    + usage.cache_read_input_tokens.unwrap_or(0),
+            ),
             reasoning_tokens: None,
         }
     }

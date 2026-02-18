@@ -56,14 +56,18 @@ pub(crate) struct AnthropicMessageResponse {
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
 pub(crate) struct AnthropicUsage {
-    pub cache_creation: AnthropicCacheCreation,
-    pub cache_creation_input_tokens: usize,
-    pub cache_read_input_tokens: usize,
+    #[serde(default)]
+    pub cache_creation: Option<AnthropicCacheCreation>,
+    #[serde(default)]
+    pub cache_creation_input_tokens: Option<usize>,
+    #[serde(default)]
+    pub cache_read_input_tokens: Option<usize>,
     pub input_tokens: usize,
     pub output_tokens: usize,
     #[serde(default = "AnthropicServerToolUsage::default")]
     pub server_tool_use: AnthropicServerToolUsage,
-    pub service_tier: String,
+    #[serde(default)]
+    pub service_tier: Option<String>,
 }
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize)]
