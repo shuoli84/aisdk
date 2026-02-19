@@ -138,193 +138,241 @@ impl<M: ModelName> LanguageModel for Anthropic<M> {
         let stream = response.scan::<_, Result<Vec<LanguageModelStreamChunk>>, _, _>(
             StreamState::default(),
             |state, evt_res| {
-                let unsupported =  |event: &str| {
+                let unsupported = |event: &str| {
                     vec![LanguageModelStreamChunk::Delta(
-                        LanguageModelStreamChunkType::NotSupported(format!("AnthropicStreamEvent::{event}")),
+                        LanguageModelStreamChunkType::NotSupported(format!(
+                            "AnthropicStreamEvent::{event}"
+                        )),
                     )]
                 };
                 futures::future::ready({
                     match evt_res {
-                    Ok(event) => match event {
-                        AnthropicStreamEvent::MessageStart { .. } => {
-                            Some(Ok(vec![LanguageModelStreamChunk::Delta(
-                                LanguageModelStreamChunkType::Start,
-                            )]))
-                        }
-                        AnthropicStreamEvent::ContentBlockStart {
-                            index,
-                            content_block,
-                        } => match content_block {
-                            AnthropicContentBlock::Text { .. } => {
-                                state
-                                    .content_blocks
-                                    .insert(index, AccumulatedBlock::Text(String::new()));
-                                Some(Ok(unsupported("ContentBlockStart::Text")))
+                        Ok(event) => match event {
+                            AnthropicStreamEvent::MessageStart { .. } => {
+                                Some(Ok(vec![LanguageModelStreamChunk::Delta(
+                                    LanguageModelStreamChunkType::Start,
+                                )]))
                             }
-                            AnthropicContentBlock::Thinking { .. } => {
-                                state
-                                    .content_blocks
-                                    .insert(index, AccumulatedBlock::Thinking {
-                                        thinking: String::new(),
-                                        signature: None,
-                                    });
-                                Some(Ok(unsupported("ContentBlockStart::Thinking")))
-                            }
-                            AnthropicContentBlock::RedactedThinking { data } => {
-                                state.content_blocks.insert(
-                                    index,
-                                    AccumulatedBlock::RedactedThinking(data.clone()),
-                                );
-                                Some(Ok(unsupported("ContentBlockStart::RedactedThinking")))
-                            }
-                            AnthropicContentBlock::ToolUse { id, name, .. } => {
-                                state.content_blocks.insert(
-                                    index,
-                                    AccumulatedBlock::ToolUse {
-                                        id,
-                                        name,
-                                        accumulated_json: String::new(),
-                                    },
-                                );
-                                Some(Ok(unsupported("ContentBlockStart::ToolUse")))
-                            }
-                        },
-                        AnthropicStreamEvent::ContentBlockDelta { index, delta } => {
-                            if let Some(block) = state.content_blocks.get_mut(&index) {
-                                match (block, delta) {
-                                    (
-                                        AccumulatedBlock::Text(text),
-                                        AnthropicDelta::TextDelta { text: delta_text },
-                                    ) => {
-                                        text.push_str(&delta_text);
-                                        Some(Ok(vec![LanguageModelStreamChunk::Delta(
-                                            LanguageModelStreamChunkType::Text(delta_text),
-                                        )]))
-                                    }
-                                    (
-                                        AccumulatedBlock::Thinking { thinking, .. },
-                                        AnthropicDelta::ThinkingDelta { thinking: delta_thinking },
-                                    ) => {
-                                        thinking.push_str(&delta_thinking);
-                                        Some(Ok(vec![LanguageModelStreamChunk::Delta(
-                                            LanguageModelStreamChunkType::Text(delta_thinking),
-                                        )]))
-                                    }
-                                    (
-                                        AccumulatedBlock::Thinking { signature, .. },
-                                        AnthropicDelta::SignatureDelta { signature: delta_signature },
-                                    ) => {
-                                        *signature = Some(delta_signature.clone());
-                                        Some(Ok(unsupported("SignatureDelta")))
-                                    }
-                                    (
-                                        AccumulatedBlock::ToolUse {
-                                            accumulated_json, ..
-                                        },
-                                        AnthropicDelta::ToolUseDelta { partial_json },
-                                    ) => {
-                                        accumulated_json.push_str(&partial_json);
-                                        Some(Ok(vec![LanguageModelStreamChunk::Delta(
-                                            LanguageModelStreamChunkType::ToolCall(partial_json),
-                                        )]))
-                                    }
-                                    _ => Some(Ok(unsupported("ContentBlockDelta"))),
+                            AnthropicStreamEvent::ContentBlockStart {
+                                index,
+                                content_block,
+                            } => match content_block {
+                                AnthropicContentBlock::Text { .. } => {
+                                    state
+                                        .content_blocks
+                                        .insert(index, AccumulatedBlock::Text(String::new()));
+                                    Some(Ok(unsupported("ContentBlockStart::Text")))
                                 }
-                            } else {
-                                unreachable!("Anthropic accumulator must be initialized on AnthropicStreamEvent::ContentBlockStart")
+                                AnthropicContentBlock::Thinking { .. } => {
+                                    state.content_blocks.insert(
+                                        index,
+                                        AccumulatedBlock::Thinking {
+                                            thinking: String::new(),
+                                            signature: None,
+                                        },
+                                    );
+                                    Some(Ok(unsupported("ContentBlockStart::Thinking")))
+                                }
+                                AnthropicContentBlock::RedactedThinking { data } => {
+                                    state.content_blocks.insert(
+                                        index,
+                                        AccumulatedBlock::RedactedThinking(data.clone()),
+                                    );
+                                    Some(Ok(unsupported("ContentBlockStart::RedactedThinking")))
+                                }
+                                AnthropicContentBlock::ToolUse { id, name, .. } => {
+                                    state.content_blocks.insert(
+                                        index,
+                                        AccumulatedBlock::ToolUse {
+                                            id,
+                                            name,
+                                            accumulated_json: String::new(),
+                                        },
+                                    );
+                                    Some(Ok(unsupported("ContentBlockStart::ToolUse")))
+                                }
+                            },
+                            AnthropicStreamEvent::ContentBlockDelta { index, delta } => {
+                                if let Some(block) = state.content_blocks.get_mut(&index) {
+                                    match (block, delta) {
+                                        (
+                                            AccumulatedBlock::Text(text),
+                                            AnthropicDelta::TextDelta { text: delta_text },
+                                        ) => {
+                                            text.push_str(&delta_text);
+                                            Some(Ok(vec![LanguageModelStreamChunk::Delta(
+                                                LanguageModelStreamChunkType::Text(delta_text),
+                                            )]))
+                                        }
+                                        (
+                                            AccumulatedBlock::Thinking { thinking, .. },
+                                            AnthropicDelta::ThinkingDelta {
+                                                thinking: delta_thinking,
+                                            },
+                                        ) => {
+                                            thinking.push_str(&delta_thinking);
+                                            Some(Ok(vec![LanguageModelStreamChunk::Delta(
+                                                LanguageModelStreamChunkType::Text(delta_thinking),
+                                            )]))
+                                        }
+                                        (
+                                            AccumulatedBlock::Thinking { signature, .. },
+                                            AnthropicDelta::SignatureDelta {
+                                                signature: delta_signature,
+                                            },
+                                        ) => {
+                                            *signature = Some(delta_signature.clone());
+                                            Some(Ok(unsupported("SignatureDelta")))
+                                        }
+                                        (
+                                            AccumulatedBlock::ToolUse {
+                                                accumulated_json, ..
+                                            },
+                                            AnthropicDelta::ToolUseDelta { partial_json },
+                                        ) => {
+                                            accumulated_json.push_str(&partial_json);
+                                            Some(Ok(vec![LanguageModelStreamChunk::Delta(
+                                                LanguageModelStreamChunkType::ToolCall(
+                                                    partial_json,
+                                                ),
+                                            )]))
+                                        }
+                                        _ => Some(Ok(unsupported("ContentBlockDelta"))),
+                                    }
+                                } else {
+                                    match delta {
+                                        AnthropicDelta::TextDelta { text } => {
+                                            Some(Ok(vec![LanguageModelStreamChunk::Delta(
+                                                LanguageModelStreamChunkType::Text(text),
+                                            )]))
+                                        }
+                                        AnthropicDelta::ThinkingDelta { thinking } => {
+                                            Some(Ok(vec![LanguageModelStreamChunk::Delta(
+                                                LanguageModelStreamChunkType::Text(thinking),
+                                            )]))
+                                        }
+                                        AnthropicDelta::ToolUseDelta { partial_json } => {
+                                            Some(Ok(vec![LanguageModelStreamChunk::Delta(
+                                                LanguageModelStreamChunkType::ToolCall(
+                                                    partial_json,
+                                                ),
+                                            )]))
+                                        }
+                                        AnthropicDelta::CitationDelta { citation } => {
+                                            Some(Ok(vec![LanguageModelStreamChunk::Delta(
+                                                LanguageModelStreamChunkType::NotSupported(
+                                                    format!("CitationDelta: {:?}", citation),
+                                                ),
+                                            )]))
+                                        }
+                                        AnthropicDelta::SignatureDelta { signature } => {
+                                            Some(Ok(vec![LanguageModelStreamChunk::Delta(
+                                                LanguageModelStreamChunkType::NotSupported(
+                                                    format!("SignatureDelta: {}", signature),
+                                                ),
+                                            )]))
+                                        }
+                                    }
+                                }
                             }
-                        }
-                        AnthropicStreamEvent::ContentBlockStop { .. } => {
-                            Some(Ok(unsupported("ContentBlockStop")))
-                        }
-                        AnthropicStreamEvent::MessageDelta { usage, .. } => {
-                            state.usage = Some(usage);
-                            Some(Ok(unsupported("MessageDelta")))
-                        }
-                        AnthropicStreamEvent::MessageStop => {
-                            let mut collected = vec![];
-                            for block in state.content_blocks.values() {
-                                match block {
-                                    AccumulatedBlock::Text(text) => collected
-                                        .push(LanguageModelResponseContentType::new(text.clone())),
-                                    AccumulatedBlock::Thinking { thinking, signature } => {
-                                        let extensions = Extensions::default();
-                                        if let Some(sig) = signature {
-                                            extensions
+                            AnthropicStreamEvent::ContentBlockStop { .. } => {
+                                Some(Ok(unsupported("ContentBlockStop")))
+                            }
+                            AnthropicStreamEvent::MessageDelta { usage, .. } => {
+                                state.usage = Some(usage);
+                                Some(Ok(unsupported("MessageDelta")))
+                            }
+                            AnthropicStreamEvent::MessageStop => {
+                                let mut collected = vec![];
+                                for block in state.content_blocks.values() {
+                                    match block {
+                                        AccumulatedBlock::Text(text) => collected.push(
+                                            LanguageModelResponseContentType::new(text.clone()),
+                                        ),
+                                        AccumulatedBlock::Thinking {
+                                            thinking,
+                                            signature,
+                                        } => {
+                                            let extensions = Extensions::default();
+                                            if let Some(sig) = signature {
+                                                extensions
                                                 .get_mut::<extensions::AnthropicThinkingMetadata>()
                                                 .signature = Some(sig.clone());
+                                            }
+                                            collected.push(
+                                                LanguageModelResponseContentType::Reasoning {
+                                                    content: thinking.clone(),
+                                                    extensions,
+                                                },
+                                            )
                                         }
-                                        collected.push(LanguageModelResponseContentType::Reasoning {
-                                            content: thinking.clone(),
-                                            extensions,
-                                        })
-                                    }
-                                    AccumulatedBlock::RedactedThinking(data) => collected.push(
-                                        LanguageModelResponseContentType::Reasoning {
-                                            content: data.clone(),
-                                            extensions: Extensions::default(),
-                                        },
-                                    ),
-                                    AccumulatedBlock::ToolUse {
-                                        id,
-                                        name,
-                                        accumulated_json,
-                                    } => {
-                                        let json_str = if accumulated_json.trim().is_empty() {
-                                            "{}"
-                                        } else {
-                                            accumulated_json
-                                        };
-                                        if let Ok(input) = serde_json::from_str(json_str) {
-                                            collected.push(
-                                                LanguageModelResponseContentType::ToolCall(
-                                                    ToolCallInfo {
-                                                        input,
-                                                        tool: ToolDetails {
-                                                            id: id.clone(),
-                                                            name: name.clone(),
+                                        AccumulatedBlock::RedactedThinking(data) => collected.push(
+                                            LanguageModelResponseContentType::Reasoning {
+                                                content: data.clone(),
+                                                extensions: Extensions::default(),
+                                            },
+                                        ),
+                                        AccumulatedBlock::ToolUse {
+                                            id,
+                                            name,
+                                            accumulated_json,
+                                        } => {
+                                            let json_str = if accumulated_json.trim().is_empty() {
+                                                "{}"
+                                            } else {
+                                                accumulated_json
+                                            };
+                                            if let Ok(input) = serde_json::from_str(json_str) {
+                                                collected.push(
+                                                    LanguageModelResponseContentType::ToolCall(
+                                                        ToolCallInfo {
+                                                            input,
+                                                            tool: ToolDetails {
+                                                                id: id.clone(),
+                                                                name: name.clone(),
+                                                            },
+                                                            extensions: Extensions::default(),
                                                         },
-                                                        extensions: Extensions::default(),
-                                                    },
-                                                ),
-                                            );
-                                        } else {
-                                            collected.push(
-                                                LanguageModelResponseContentType::NotSupported(
-                                                    format!(
-                                                        "Invalid tool json: {accumulated_json}"
                                                     ),
-                                                ),
-                                            );
+                                                );
+                                            } else {
+                                                collected.push(
+                                                    LanguageModelResponseContentType::NotSupported(
+                                                        format!(
+                                                            "Invalid tool json: {accumulated_json}"
+                                                        ),
+                                                    ),
+                                                );
+                                            }
                                         }
                                     }
                                 }
-                            }
-                            Some(Ok(collected
-                                .into_iter()
-                                .map(|ref c| {
-                                    LanguageModelStreamChunk::Done(AssistantMessage {
-                                        content: c.clone(),
-                                        usage: state.usage.clone().map(|usage| usage.into()),
+                                Some(Ok(collected
+                                    .into_iter()
+                                    .map(|ref c| {
+                                        LanguageModelStreamChunk::Done(AssistantMessage {
+                                            content: c.clone(),
+                                            usage: state.usage.clone().map(|usage| usage.into()),
+                                        })
                                     })
-                                })
-                                .collect()))
-                        }
-                        AnthropicStreamEvent::Error { error } => {
-                            let reason = format!("{}: {}", error.type_, error.message);
+                                    .collect()))
+                            }
+                            AnthropicStreamEvent::Error { error } => {
+                                let reason = format!("{}: {}", error.type_, error.message);
 
-                            Some(Ok(vec![LanguageModelStreamChunk::Delta(
-                                LanguageModelStreamChunkType::Failed(reason),
-                            )]))
-                        }
-                        AnthropicStreamEvent::NotSupported(txt) => {
-                            Some(Ok(vec![LanguageModelStreamChunk::Delta(
-                                LanguageModelStreamChunkType::NotSupported(txt),
-                            )]))
-                        }
-                    },
-                    Err(e) => Some(Err(e)),
-                }})
+                                Some(Ok(vec![LanguageModelStreamChunk::Delta(
+                                    LanguageModelStreamChunkType::Failed(reason),
+                                )]))
+                            }
+                            AnthropicStreamEvent::NotSupported(txt) => {
+                                Some(Ok(vec![LanguageModelStreamChunk::Delta(
+                                    LanguageModelStreamChunkType::NotSupported(txt),
+                                )]))
+                            }
+                        },
+                        Err(e) => Some(Err(e)),
+                    }
+                })
             },
         );
 
