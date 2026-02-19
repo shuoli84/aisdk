@@ -212,7 +212,9 @@ impl<M: ModelName> LanguageModel for Anthropic<M> {
                                         ) => {
                                             thinking.push_str(&delta_thinking);
                                             Some(Ok(vec![LanguageModelStreamChunk::Delta(
-                                                LanguageModelStreamChunkType::Text(delta_thinking),
+                                                LanguageModelStreamChunkType::Reasoning(
+                                                    delta_thinking,
+                                                ),
                                             )]))
                                         }
                                         (
@@ -248,7 +250,7 @@ impl<M: ModelName> LanguageModel for Anthropic<M> {
                                         }
                                         AnthropicDelta::ThinkingDelta { thinking } => {
                                             Some(Ok(vec![LanguageModelStreamChunk::Delta(
-                                                LanguageModelStreamChunkType::Text(thinking),
+                                                LanguageModelStreamChunkType::Reasoning(thinking),
                                             )]))
                                         }
                                         AnthropicDelta::ToolUseDelta { partial_json } => {
